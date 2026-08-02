@@ -15,6 +15,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Digital Window",
   description: "1:1 展示螢幕：影片背景與即時天氣",
+  // 展示用網站，不讓搜尋引擎收錄
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function RootLayout({
