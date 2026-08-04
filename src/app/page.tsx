@@ -27,10 +27,11 @@ export default function Home() {
 
   return (
     <main className="flex h-dvh w-full items-center justify-center overflow-hidden bg-black">
-      {/* 1:1 展示畫面 */}
-      <div className="relative aspect-square h-full max-h-[100vw]">
+      {/* 1:1 展示畫面，作為 container 讓面板以 cqw 等比縮放 */}
+      <div className="@container relative aspect-square h-full max-h-[100vw]">
         <VideoBackground src={VIDEOS[videoIndex]} />
-        <div className="absolute left-6 top-6">
+        {/* 右上 1/4 區塊 */}
+        <div className="absolute right-0 top-0 h-1/2 w-1/2 p-[3cqw]">
           <WeatherCard />
         </div>
       </div>
