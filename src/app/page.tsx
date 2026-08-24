@@ -10,7 +10,7 @@ const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 // 鍵盤 1、2… 依序切換
 const VIDEOS = [
   `${BASE_PATH}/videos/forest.mp4`,
-  `${BASE_PATH}/videos/evening.mp4`,
+  `${BASE_PATH}/videos/skyline.mp4`,
 ];
 
 export default function Home() {
