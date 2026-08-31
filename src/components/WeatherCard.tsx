@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import {
   Cloud,
   CloudRain,
@@ -16,9 +13,7 @@ import {
   Wind,
   type LucideIcon,
 } from "lucide-react";
-import { fetchWeather, type Weather } from "@/lib/weather";
-
-const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+import type { Weather } from "@/lib/weather";
 
 type Detail = { icon: LucideIcon; label: string; value: string };
 
@@ -47,33 +42,13 @@ function detailRows(w: Weather): Detail[][] {
   ];
 }
 
-export default function WeatherCard() {
-  const [weather, setWeather] = useState<Weather | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        const data = await fetchWeather();
-        if (!cancelled) {
-          setWeather(data);
-          setFailed(false);
-        }
-      } catch {
-        if (!cancelled) setFailed(true);
-      }
-    };
-
-    load();
-    const timer = setInterval(load, REFRESH_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, []);
-
+export default function WeatherCard({
+  weather,
+  failed,
+}: {
+  weather: Weather | null;
+  failed: boolean;
+}) {
   return (
     <div className="flex h-full w-full flex-col rounded-[2.2cqw] border border-white/20 bg-black/20 p-[3cqw] text-white backdrop-blur-[1.7cqw] shadow-[inset_0.15cqw_0.15cqw_0_rgba(255,255,255,0.45),1.1cqw_1.1cqw_3.3cqw_rgba(0,0,0,0.35)] [text-shadow:0_0.15cqw_0.3cqw_rgba(0,0,0,0.35)]">
       {weather ? (

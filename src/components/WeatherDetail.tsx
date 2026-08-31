@@ -1,0 +1,393 @@
+"use client";
+
+import type { ReactNode } from "react";
+import {
+  Clock,
+  Cloud,
+  Compass,
+  Database,
+  Droplet,
+  Droplets,
+  Eye,
+  Gauge,
+  MapPin,
+  Navigation,
+  Smile,
+  Sun,
+  Sunrise,
+  Sunset,
+  Thermometer,
+  TrendingUp,
+  Umbrella,
+  Waves,
+  Wind,
+  type LucideIcon,
+} from "lucide-react";
+import WeatherArt from "./WeatherArt";
+import type { HourPoint, Weather } from "@/lib/weather";
+
+/* ---------- 月相：用 mask 疊出亮面，比用兩段弧線拼路徑好推理 ---------- */
+
+function MoonDisc({
+  illumination,
+  waxing,
+  className,
+}: {
+  illumination: number;
+  waxing: boolean;
+  className: string;
+}) {
+  const c = 50;
+  const r = 42;
+  const rx = r * Math.abs(1 - 2 * illumination);
+  // 亮面在右（漸盈）或左（漸虧）；過半時橢圓補足亮面，未過半時橢圓吃掉亮面
+  const litHalfX = waxing ? c : c - r;
+  const ellipseAdds = illumination > 0.5;
+
+  return (
+    <svg viewBox="0 0 100 100" className={className} aria-hidden>
+      <defs>
+        <mask id="moon-lit">
+          <rect x="0" y="0" width="100" height="100" fill="black" />
+          <rect x={litHalfX} y={c - r} width={r} height={r * 2} fill="white" />
+          <ellipse cx={c} cy={c} rx={rx} ry={r} fill={ellipseAdds ? "white" : "black"} />
+        </mask>
+      </defs>
+      <circle cx={c} cy={c} r={r} fill="#31363f" />
+      <circle cx={c} cy={c} r={r} fill="#dcdccf" mask="url(#moon-lit)" />
+      <g fill="#bdbdae" opacity="0.6" mask="url(#moon-lit)">
+        <circle cx="38" cy="36" r="8" />
+        <circle cx="62" cy="56" r="10" />
+        <circle cx="44" cy="70" r="5" />
+        <circle cx="68" cy="30" r="4" />
+        <circle cx="30" cy="58" r="4" />
+      </g>
+    </svg>
+  );
+}
+
+/* ---------- AQI 分段色帶 ---------- */
+
+const AQI_BANDS = [
+  { max: 50, color: "#4ade80" },
+  { max: 100, color: "#a3e635" },
+  { max: 150, color: "#fbbf24" },
+  { max: 200, color: "#fb923c" },
+  { max: 300, color: "#ef4444" },
+  { max: 500, color: "#a855f7" },
+];
+
+function aqiMarkerPercent(aqi: number): number {
+  let lower = 0;
+  for (let i = 0; i < AQI_BANDS.length; i += 1) {
+    const { max } = AQI_BANDS[i];
+    if (aqi <= max) {
+      return ((i + (aqi - lower) / (max - lower)) / AQI_BANDS.length) * 100;
+    }
+    lower = max;
+  }
+  return 100;
+}
+
+/* ---------- 版面零件 ---------- */
+
+function Card({ className = "", children }: { className?: string; children: ReactNode }) {
+  return (
+    <div
+      className={`rounded-[1.5cqw] border border-white/15 bg-black/20 p-[1.5cqw] backdrop-blur-[1.3cqw] shadow-[inset_0.1cqw_0.1cqw_0_rgba(255,255,255,0.28)] ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Row({
+  icon: Icon,
+  label,
+  value,
+  unit,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  unit?: string;
+}) {
+  return (
+    <div className="flex items-center gap-[0.8cqw]">
+      <Icon className="size-[1.7cqw] shrink-0 text-white/55" strokeWidth={1.5} aria-hidden />
+      <div className="min-w-0">
+        <p className="text-[1.05cqw] leading-tight text-white/60">{label}</p>
+        <p className="text-[1.5cqw] font-medium leading-tight">
+          {value}
+          {unit && <span className="ml-[0.3cqw] text-[1cqw] text-white/60">{unit}</span>}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function StatRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between border-b border-dashed border-white/12 pb-[0.5cqw] last:border-0 last:pb-0">
+      <span className="flex items-center gap-[0.6cqw] text-[1.15cqw] text-white/65">
+        <Icon className="size-[1.4cqw]" strokeWidth={1.5} aria-hidden />
+        {label}
+      </span>
+      <span className="text-[1.35cqw] font-medium">{value}</span>
+    </div>
+  );
+}
+
+function TrendLine({ hourly }: { hourly: HourPoint[] }) {
+  const temps = hourly.map((h) => h.temperature);
+  const max = Math.max(...temps);
+  const min = Math.min(...temps);
+  const span = max - min || 1;
+  const x = (i: number) => (i + 0.5) * (100 / hourly.length);
+  const y = (t: number) => 22 + (1 - (t - min) / span) * 56;
+
+  return (
+    <div className="relative h-[5cqw] w-full">
+      <svg
+        className="absolute inset-0 h-full w-full"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        aria-hidden
+      >
+        <polyline
+          points={temps.map((t, i) => `${x(i)},${y(t)}`).join(" ")}
+          fill="none"
+          stroke="rgba(255,255,255,0.85)"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      {temps.map((t, i) => (
+        <span
+          key={hourly[i].time}
+          className="absolute size-[0.7cqw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white"
+          style={{ left: `${x(i)}%`, top: `${y(t)}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function SunArc({ progress }: { progress: number }) {
+  const angle = Math.PI * (1 - progress);
+  const cx = 50 + 44 * Math.cos(angle);
+  const cy = 30 - 24 * Math.sin(angle);
+  return (
+    <svg viewBox="0 0 100 36" className="w-full" aria-hidden>
+      <path
+        d="M6 30 A 44 24 0 0 1 94 30"
+        fill="none"
+        stroke="rgba(255,255,255,0.4)"
+        strokeWidth="0.8"
+        strokeDasharray="2.5 2.5"
+      />
+      <circle cx={cx} cy={cy} r="3.2" fill="#fcd34d" />
+    </svg>
+  );
+}
+
+/* ---------- 面板 ---------- */
+
+export default function WeatherDetail({
+  weather,
+  failed,
+}: {
+  weather: Weather | null;
+  failed: boolean;
+}) {
+  if (!weather) {
+    return (
+      <div className="flex h-full w-full items-center justify-center text-[2cqw] text-white/80 [text-shadow:0_0.15cqw_0.3cqw_rgba(0,0,0,0.4)]">
+        {failed ? "無法取得天氣資料" : "天氣載入中…"}
+      </div>
+    );
+  }
+
+  const w = weather;
+  const daylightHours = Math.floor(w.daylightMinutes / 60);
+  const daylightRest = w.daylightMinutes % 60;
+
+  return (
+    <div className="flex h-full w-full flex-col gap-[1.4cqw] p-[3.5cqw] text-white [text-shadow:0_0.1cqw_0.25cqw_rgba(0,0,0,0.4)]">
+      <div className="grid min-h-0 flex-[3] grid-cols-12 grid-rows-[2fr_1fr] gap-[1.4cqw]">
+        {/* 現況 */}
+        <Card className="col-span-4 row-span-2 flex flex-col">
+          <p className="flex items-center gap-[0.6cqw] text-[1.8cqw]">
+            <MapPin className="size-[1.8cqw] text-white/70" strokeWidth={1.5} aria-hidden />
+            {w.city}
+          </p>
+          <p className="mt-[0.8cqw] text-[1.2cqw] text-white/60">目前天氣</p>
+          <div className="mt-[2cqw] flex items-center justify-between">
+            <span className="text-[8cqw] font-extralight leading-none">{w.temperature}°</span>
+            <WeatherArt code={w.weatherCode} isDay={w.isDay} className="w-[13cqw]" />
+          </div>
+          <p className="mt-[2.5cqw] text-[3cqw] font-light">{w.description}</p>
+          <p className="mt-[1.2cqw] flex items-center gap-[0.6cqw] text-[1.7cqw] text-white/85">
+            <Thermometer className="size-[1.7cqw] text-white/60" strokeWidth={1.5} aria-hidden />
+            體感 {w.feelsLike}°
+          </p>
+          <div className="mt-auto border-t border-white/15 pt-[1.2cqw] text-[1.5cqw] text-white/75">
+            最高 {w.tempMax}° <span className="mx-[1cqw] text-white/35">/</span> 最低 {w.tempMin}°
+          </div>
+        </Card>
+
+        {/* 即時氣象 */}
+        <Card className="col-span-5 flex flex-col">
+          <p className="text-[1.3cqw] text-white/80">即時氣象</p>
+          <div className="mt-[1cqw] grid flex-1 grid-cols-2 gap-x-[1.4cqw] divide-x divide-white/12">
+            <div className="flex flex-col justify-between pr-[1cqw]">
+              <Row icon={Wind} label="風速" value={String(w.windSpeed)} unit="km/h" />
+              <Row icon={Wind} label="陣風" value={String(w.windGusts)} unit="km/h" />
+              <Row icon={Navigation} label="風向" value={w.windDirection} />
+              <Row icon={Compass} label="風向角度" value={`${w.windDirectionDegrees}°`} />
+              <Row icon={Droplets} label="濕度" value={`${w.humidity}%`} />
+              <Row icon={Droplet} label="露點" value={`${w.dewPoint}°`} />
+            </div>
+            <div className="flex flex-col justify-between pl-[1.4cqw]">
+              <Row icon={Umbrella} label="降雨機率" value={`${w.precipitationProbability}%`} />
+              <Row icon={Cloud} label="即時降雨量" value={String(w.precipitation)} unit="mm" />
+              <Row icon={Clock} label="過去 1 小時" value={String(w.precipitationLastHour)} unit="mm" />
+              <Row icon={Database} label="今日累積" value={String(w.precipitationToday)} unit="mm" />
+              <Row icon={Eye} label="能見度" value={String(w.visibility)} unit="km" />
+              <Row icon={Gauge} label="氣壓" value={String(w.pressure)} unit="hPa" />
+              <Row icon={Cloud} label="雲量" value={`${w.cloudCover}%`} />
+              <Row icon={Sun} label="紫外線" value={`${w.uvIndex} ${w.uvLabel}`} />
+            </div>
+          </div>
+        </Card>
+
+        {/* 空氣品質 */}
+        <Card className="col-span-3 flex flex-col">
+          <p className="text-[1.3cqw] text-white/80">空氣品質</p>
+          <p className="mt-[0.8cqw] text-[1.1cqw] text-white/60">AQI</p>
+          <div className="flex items-baseline gap-[0.8cqw]">
+            <span className="text-[4.5cqw] font-extralight leading-none">{w.aqi ?? "—"}</span>
+            <span className="text-[1.4cqw] text-white/85">{w.aqiLabel ?? ""}</span>
+          </div>
+          <div className="relative mt-[1.2cqw]">
+            <div className="flex h-[0.6cqw] gap-[0.15cqw] overflow-hidden rounded-full">
+              {AQI_BANDS.map((band) => (
+                <span key={band.max} className="flex-1" style={{ background: band.color }} />
+              ))}
+            </div>
+            {w.aqi !== null && (
+              <span
+                className="absolute top-[0.75cqw] -translate-x-1/2 border-x-[0.45cqw] border-b-[0.5cqw] border-x-transparent border-b-white"
+                style={{ left: `${aqiMarkerPercent(w.aqi)}%` }}
+              />
+            )}
+          </div>
+          <div className="mt-[1.8cqw] flex flex-col gap-[0.7cqw]">
+            {[
+              { label: "PM2.5", value: w.pm25 },
+              { label: "PM10", value: w.pm10 },
+              { label: "O₃", value: w.ozone },
+              { label: "NO₂", value: w.nitrogenDioxide },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex items-baseline justify-between text-[1.3cqw]">
+                <span className="text-white/70">{label}</span>
+                <span className="font-medium">{value === null ? "—" : Math.round(value)}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-auto text-[1.1cqw] text-white/60">主要污染物</p>
+          <p className="text-[1.5cqw] font-medium">{w.dominantPollutant ?? "—"}</p>
+        </Card>
+
+        {/* 日照資訊 */}
+        <Card className="col-span-3 flex flex-col">
+          <p className="text-[1.3cqw] text-white/80">日照資訊</p>
+          <div className="mt-[0.8cqw] flex flex-col gap-[0.5cqw]">
+            <StatRow icon={Sunrise} label="日出" value={w.sunrise} />
+            <StatRow icon={Sunset} label="日落" value={w.sunset} />
+            <StatRow
+              icon={Clock}
+              label="白晝長度"
+              value={`${daylightHours} 小時 ${daylightRest} 分`}
+            />
+            <StatRow icon={Sun} label="日照進度" value={`${Math.round(w.sunProgress * 100)}%`} />
+          </div>
+          <div className="mt-auto">
+            <SunArc progress={w.sunProgress} />
+          </div>
+        </Card>
+
+        {/* 體感環境 */}
+        <Card className="col-span-3 flex flex-col">
+          <p className="text-[1.3cqw] text-white/80">體感環境</p>
+          <div className="mt-[0.8cqw] flex flex-1 flex-col justify-around">
+            <StatRow icon={Smile} label="舒適度" value={w.comfort} />
+            <StatRow icon={TrendingUp} label="體感趨勢" value={w.feelsTrend} />
+            <StatRow icon={Waves} label="蒸發感" value={w.evaporation} />
+            <StatRow icon={Wind} label="空氣狀態" value={w.airState} />
+          </div>
+        </Card>
+
+        {/* 月相 */}
+        <Card className="col-span-2 flex flex-col">
+          <p className="text-[1.3cqw] text-white/80">月相</p>
+          <div className="flex flex-1 items-center justify-center">
+            <MoonDisc
+              illumination={w.moon.illumination}
+              waxing={w.moon.waxing}
+              className="w-[7.5cqw]"
+            />
+          </div>
+          <div className="flex items-baseline justify-between text-[1.15cqw]">
+            <span className="text-white/65">可見比例</span>
+            <span className="text-[1.35cqw] font-medium">
+              {Math.round(w.moon.illumination * 100)}%
+            </span>
+          </div>
+          <div className="mt-[0.5cqw] flex items-baseline justify-between text-[1.15cqw]">
+            <span className="text-white/65">月齡</span>
+            <span className="text-[1.35cqw] font-medium">
+              {Math.round(w.moon.age)} <span className="text-[1cqw] text-white/60">天</span>
+            </span>
+          </div>
+        </Card>
+      </div>
+
+      {/* 未來 6 小時趨勢 */}
+      <Card className="flex min-h-0 flex-1 flex-col">
+        <p className="text-[1.4cqw] text-white/85">未來 6 小時天氣趨勢</p>
+        <div className="mt-[0.8cqw] grid grid-cols-6 text-center text-[1.15cqw] text-white/65">
+          {w.hourly.map((h) => (
+            <span key={h.time}>{h.time}</span>
+          ))}
+        </div>
+        <div className="mt-[0.6cqw] grid grid-cols-6 place-items-center">
+          {w.hourly.map((h) => (
+            <WeatherArt key={h.time} code={h.weatherCode} isDay={h.isDay} className="w-[5cqw]" />
+          ))}
+        </div>
+        <TrendLine hourly={w.hourly} />
+        <div className="grid grid-cols-6 text-center text-[1.7cqw] font-light">
+          {w.hourly.map((h) => (
+            <span key={h.time}>{h.temperature}°</span>
+          ))}
+        </div>
+        <div className="mt-auto grid grid-cols-6 place-items-center border-t border-white/12 pt-[0.7cqw]">
+          {w.hourly.map((h) => (
+            <span
+              key={h.time}
+              className="flex items-center gap-[0.35cqw] text-[1.15cqw] text-white/70"
+            >
+              <Droplet className="size-[1.15cqw] text-sky-300" strokeWidth={1.6} aria-hidden />
+              {h.precipitationProbability}%
+            </span>
+          ))}
+        </div>
+      </Card>
+
+      <p className="text-center text-[1.15cqw] text-white/75">資料更新 {w.updatedAt}</p>
+    </div>
+  );
+}
