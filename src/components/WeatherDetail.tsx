@@ -94,7 +94,7 @@ function aqiMarkerPercent(aqi: number): number {
 function Card({ className = "", children }: { className?: string; children: ReactNode }) {
   return (
     <div
-      className={`rounded-[1.5cqw] border border-white/15 bg-black/20 p-[1.5cqw] backdrop-blur-[1.3cqw] shadow-[inset_0.1cqw_0.1cqw_0_rgba(255,255,255,0.28)] ${className}`}
+      className={`glass rounded-[1.6cqw] p-[1.95cqw] backdrop-blur-[0.6cqw] ${className}`}
     >
       {children}
     </div>
@@ -116,10 +116,10 @@ function Row({
     <div className="flex items-center gap-[0.8cqw]">
       <Icon className="size-[1.7cqw] shrink-0 text-white/55" strokeWidth={1.5} aria-hidden />
       <div className="min-w-0">
-        <p className="text-[1.05cqw] leading-tight text-white/60">{label}</p>
-        <p className="text-[1.5cqw] font-medium leading-tight">
+        <p className="text-[1.05cqw] leading-tight t-caption">{label}</p>
+        <p className="text-[1.5cqw] t-value leading-tight">
           {value}
-          {unit && <span className="ml-[0.3cqw] text-[1cqw] text-white/60">{unit}</span>}
+          {unit && <span className="ml-[0.3cqw] text-[1cqw] t-caption">{unit}</span>}
         </p>
       </div>
     </div>
@@ -129,11 +129,11 @@ function Row({
 function StatRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between border-b border-dashed border-white/12 pb-[0.5cqw] last:border-0 last:pb-0">
-      <span className="flex items-center gap-[0.6cqw] text-[1.15cqw] text-white/65">
+      <span className="flex items-center gap-[0.6cqw] text-[1.15cqw] t-caption">
         <Icon className="size-[1.4cqw]" strokeWidth={1.5} aria-hidden />
         {label}
       </span>
-      <span className="text-[1.35cqw] font-medium">{value}</span>
+      <span className="text-[1.35cqw] t-value">{value}</span>
     </div>
   );
 }
@@ -204,7 +204,7 @@ export default function WeatherDetail({
 }) {
   if (!weather) {
     return (
-      <div className="flex h-full w-full items-center justify-center text-[2cqw] text-white/80 [text-shadow:0_0.15cqw_0.3cqw_rgba(0,0,0,0.4)]">
+      <div className="flex h-full w-full items-center justify-center text-[2cqw] t-label [text-shadow:0_0.15cqw_0.3cqw_rgba(0,0,0,0.4)]">
         {failed ? "無法取得天氣資料" : "天氣載入中…"}
       </div>
     );
@@ -218,29 +218,29 @@ export default function WeatherDetail({
     <div className="flex h-full w-full flex-col gap-[1.4cqw] p-[3.5cqw] text-white [text-shadow:0_0.1cqw_0.25cqw_rgba(0,0,0,0.4)]">
       <div className="grid min-h-0 flex-[3] grid-cols-12 grid-rows-[2fr_1fr] gap-[1.4cqw]">
         {/* 現況 */}
-        <Card className="col-span-4 row-span-2 flex flex-col">
+        <Card className="glass-hero col-span-4 row-span-2 flex flex-col">
           <p className="flex items-center gap-[0.6cqw] text-[1.8cqw]">
-            <MapPin className="size-[1.8cqw] text-white/70" strokeWidth={1.5} aria-hidden />
+            <MapPin className="size-[1.8cqw] t-caption" strokeWidth={1.5} aria-hidden />
             {w.city}
           </p>
-          <p className="mt-[0.8cqw] text-[1.2cqw] text-white/60">目前天氣</p>
+          <p className="mt-[0.8cqw] text-[1.2cqw] t-caption">目前天氣</p>
           <div className="mt-[2cqw] flex items-center justify-between">
-            <span className="text-[8cqw] font-extralight leading-none">{w.temperature}°</span>
+            <span className="text-[8cqw] t-display leading-none">{w.temperature}°</span>
             <WeatherArt code={w.weatherCode} isDay={w.isDay} className="w-[13cqw]" />
           </div>
-          <p className="mt-[2.5cqw] text-[3cqw] font-light">{w.description}</p>
-          <p className="mt-[1.2cqw] flex items-center gap-[0.6cqw] text-[1.7cqw] text-white/85">
-            <Thermometer className="size-[1.7cqw] text-white/60" strokeWidth={1.5} aria-hidden />
+          <p className="mt-[2.5cqw] text-[3cqw] t-display">{w.description}</p>
+          <p className="mt-[1.2cqw] flex items-center gap-[0.6cqw] text-[1.7cqw] t-label">
+            <Thermometer className="size-[1.7cqw] t-caption" strokeWidth={1.5} aria-hidden />
             體感 {w.feelsLike}°
           </p>
-          <div className="mt-auto border-t border-white/15 pt-[1.2cqw] text-[1.5cqw] text-white/75">
+          <div className="mt-auto border-t border-white/15 pt-[1.2cqw] text-[1.5cqw] t-label">
             最高 {w.tempMax}° <span className="mx-[1cqw] text-white/35">/</span> 最低 {w.tempMin}°
           </div>
         </Card>
 
         {/* 即時氣象 */}
         <Card className="col-span-5 flex flex-col">
-          <p className="text-[1.3cqw] text-white/80">即時氣象</p>
+          <p className="text-[1.3cqw] t-label">即時氣象</p>
           <div className="mt-[1cqw] grid flex-1 grid-cols-2 gap-x-[1.4cqw] divide-x divide-white/12">
             <div className="flex flex-col justify-between pr-[1cqw]">
               <Row icon={Wind} label="風速" value={String(w.windSpeed)} unit="km/h" />
@@ -265,11 +265,11 @@ export default function WeatherDetail({
 
         {/* 空氣品質 */}
         <Card className="col-span-3 flex flex-col">
-          <p className="text-[1.3cqw] text-white/80">空氣品質</p>
-          <p className="mt-[0.8cqw] text-[1.1cqw] text-white/60">AQI</p>
+          <p className="text-[1.3cqw] t-label">空氣品質</p>
+          <p className="mt-[0.8cqw] text-[1.1cqw] t-caption">AQI</p>
           <div className="flex items-baseline gap-[0.8cqw]">
-            <span className="text-[4.5cqw] font-extralight leading-none">{w.aqi ?? "—"}</span>
-            <span className="text-[1.4cqw] text-white/85">{w.aqiLabel ?? ""}</span>
+            <span className="text-[4.5cqw] t-display leading-none">{w.aqi ?? "—"}</span>
+            <span className="text-[1.4cqw] t-label">{w.aqiLabel ?? ""}</span>
           </div>
           <div className="relative mt-[1.2cqw]">
             <div className="flex h-[0.6cqw] gap-[0.15cqw] overflow-hidden rounded-full">
@@ -292,18 +292,18 @@ export default function WeatherDetail({
               { label: "NO₂", value: w.nitrogenDioxide },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-baseline justify-between text-[1.3cqw]">
-                <span className="text-white/70">{label}</span>
-                <span className="font-medium">{value === null ? "—" : Math.round(value)}</span>
+                <span className="t-caption">{label}</span>
+                <span className="t-value">{value === null ? "—" : Math.round(value)}</span>
               </div>
             ))}
           </div>
-          <p className="mt-auto text-[1.1cqw] text-white/60">主要污染物</p>
-          <p className="text-[1.5cqw] font-medium">{w.dominantPollutant ?? "—"}</p>
+          <p className="mt-auto text-[1.1cqw] t-caption">主要污染物</p>
+          <p className="text-[1.5cqw] t-value">{w.dominantPollutant ?? "—"}</p>
         </Card>
 
         {/* 日照資訊 */}
-        <Card className="col-span-3 flex flex-col">
-          <p className="text-[1.3cqw] text-white/80">日照資訊</p>
+        <Card className="glass-quiet col-span-3 flex flex-col">
+          <p className="text-[1.3cqw] t-label">日照資訊</p>
           <div className="mt-[0.8cqw] flex flex-col gap-[0.5cqw]">
             <StatRow icon={Sunrise} label="日出" value={w.sunrise} />
             <StatRow icon={Sunset} label="日落" value={w.sunset} />
@@ -320,8 +320,8 @@ export default function WeatherDetail({
         </Card>
 
         {/* 體感環境 */}
-        <Card className="col-span-3 flex flex-col">
-          <p className="text-[1.3cqw] text-white/80">體感環境</p>
+        <Card className="glass-quiet col-span-3 flex flex-col">
+          <p className="text-[1.3cqw] t-label">體感環境</p>
           <div className="mt-[0.8cqw] flex flex-1 flex-col justify-around">
             <StatRow icon={Smile} label="舒適度" value={w.comfort} />
             <StatRow icon={TrendingUp} label="體感趨勢" value={w.feelsTrend} />
@@ -331,8 +331,8 @@ export default function WeatherDetail({
         </Card>
 
         {/* 月相 */}
-        <Card className="col-span-2 flex flex-col">
-          <p className="text-[1.3cqw] text-white/80">月相</p>
+        <Card className="glass-quiet col-span-2 flex flex-col">
+          <p className="text-[1.3cqw] t-label">月相</p>
           <div className="flex flex-1 items-center justify-center">
             <MoonDisc
               illumination={w.moon.illumination}
@@ -341,15 +341,15 @@ export default function WeatherDetail({
             />
           </div>
           <div className="flex items-baseline justify-between text-[1.15cqw]">
-            <span className="text-white/65">可見比例</span>
-            <span className="text-[1.35cqw] font-medium">
+            <span className="t-caption">可見比例</span>
+            <span className="text-[1.35cqw] t-value">
               {Math.round(w.moon.illumination * 100)}%
             </span>
           </div>
           <div className="mt-[0.5cqw] flex items-baseline justify-between text-[1.15cqw]">
-            <span className="text-white/65">月齡</span>
-            <span className="text-[1.35cqw] font-medium">
-              {Math.round(w.moon.age)} <span className="text-[1cqw] text-white/60">天</span>
+            <span className="t-caption">月齡</span>
+            <span className="text-[1.35cqw] t-value">
+              {Math.round(w.moon.age)} <span className="text-[1cqw] t-caption">天</span>
             </span>
           </div>
         </Card>
@@ -357,8 +357,8 @@ export default function WeatherDetail({
 
       {/* 未來 6 小時趨勢 */}
       <Card className="flex min-h-0 flex-1 flex-col">
-        <p className="text-[1.4cqw] text-white/85">未來 6 小時天氣趨勢</p>
-        <div className="mt-[0.8cqw] grid grid-cols-6 text-center text-[1.15cqw] text-white/65">
+        <p className="text-[1.4cqw] t-label">未來 6 小時天氣趨勢</p>
+        <div className="mt-[0.8cqw] grid grid-cols-6 text-center text-[1.15cqw] t-caption">
           {w.hourly.map((h) => (
             <span key={h.time}>{h.time}</span>
           ))}
@@ -369,7 +369,7 @@ export default function WeatherDetail({
           ))}
         </div>
         <TrendLine hourly={w.hourly} />
-        <div className="grid grid-cols-6 text-center text-[1.7cqw] font-light">
+        <div className="grid grid-cols-6 text-center text-[1.7cqw] t-display">
           {w.hourly.map((h) => (
             <span key={h.time}>{h.temperature}°</span>
           ))}
@@ -378,7 +378,7 @@ export default function WeatherDetail({
           {w.hourly.map((h) => (
             <span
               key={h.time}
-              className="flex items-center gap-[0.35cqw] text-[1.15cqw] text-white/70"
+              className="flex items-center gap-[0.35cqw] text-[1.15cqw] t-caption"
             >
               <Droplet className="size-[1.15cqw] text-sky-300" strokeWidth={1.6} aria-hidden />
               {h.precipitationProbability}%
@@ -387,7 +387,7 @@ export default function WeatherDetail({
         </div>
       </Card>
 
-      <p className="text-center text-[1.15cqw] text-white/75">資料更新 {w.updatedAt}</p>
+      <p className="text-center text-[1.15cqw] t-label">資料更新 {w.updatedAt}</p>
     </div>
   );
 }

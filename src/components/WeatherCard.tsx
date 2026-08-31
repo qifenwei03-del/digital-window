@@ -50,17 +50,17 @@ export default function WeatherCard({
   failed: boolean;
 }) {
   return (
-    <div className="flex h-full w-full flex-col rounded-[2.2cqw] border border-white/20 bg-black/20 p-[3cqw] text-white backdrop-blur-[1.7cqw] shadow-[inset_0.15cqw_0.15cqw_0_rgba(255,255,255,0.45),1.1cqw_1.1cqw_3.3cqw_rgba(0,0,0,0.35)] [text-shadow:0_0.15cqw_0.3cqw_rgba(0,0,0,0.35)]">
+    <div className="flex h-full w-full flex-col glass glass-hero rounded-[2.2cqw] p-[3.6cqw] text-white backdrop-blur-[0.75cqw] [text-shadow:0_0.15cqw_0.3cqw_rgba(0,0,0,0.35)]">
       {weather ? (
         <>
-          <p className="text-[1.95cqw] font-medium text-white/85">{weather.city}</p>
+          <p className="t-value text-[1.7cqw]">{weather.city}</p>
           <div className="mt-[0.5cqw] flex items-center justify-between">
-            <span className="text-[7cqw] font-extralight leading-none">
+            <span className="t-display text-[7.4cqw] leading-none">
               {weather.temperature}°
             </span>
-            <span className="text-[2.5cqw] text-white/90">{weather.description}</span>
+            <span className="t-value text-[2.2cqw]">{weather.description}</span>
           </div>
-          <p className="mt-[0.8cqw] text-[1.7cqw] text-white/80">體感 {weather.feelsLike}°</p>
+          <p className="t-label mt-[1cqw] text-[1.55cqw]">體感 {weather.feelsLike}°</p>
 
           <div className="mt-[2cqw] flex flex-1 flex-col divide-y divide-white/10 border-t border-white/10">
             {detailRows(weather).map((row, i) => (
@@ -69,9 +69,9 @@ export default function WeatherCard({
                   <div key={label}>
                     <div className="flex items-center gap-[0.8cqw] text-white/75">
                       <Icon className="size-[1.8cqw]" strokeWidth={1.8} aria-hidden />
-                      <span className="text-[1.5cqw]">{label}</span>
+                      <span className="t-label text-[1.35cqw]">{label}</span>
                     </div>
-                    <p className="mt-[0.4cqw] text-[1.95cqw] font-medium text-white/95">{value}</p>
+                    <p className="t-value mt-[0.55cqw] text-[1.8cqw]">{value}</p>
                   </div>
                 ))}
               </div>
@@ -79,7 +79,7 @@ export default function WeatherCard({
           </div>
         </>
       ) : (
-        <p className="m-auto text-[1.95cqw] text-white/80">
+        <p className="t-caption m-auto text-[1.8cqw]">
           {failed ? "無法取得天氣資料" : "天氣載入中…"}
         </p>
       )}

@@ -15,30 +15,7 @@ import {
 } from "lucide-react";
 import WeatherArt from "./WeatherArt";
 import type { HourPoint, Weather } from "@/lib/weather";
-
-// AQI 分級配色，數字旁的標籤直接用對應顏色
-function aqiColor(aqi: number | null): string {
-  if (aqi === null) return "#e5e7eb";
-  if (aqi <= 50) return "#4ade80";
-  if (aqi <= 100) return "#c8d94f";
-  if (aqi <= 150) return "#fbbf24";
-  if (aqi <= 200) return "#fb923c";
-  if (aqi <= 300) return "#ef4444";
-  return "#c084fc";
-}
-
-// 舒適度／蒸發感用暖色點出來，但真的舒適時不該亮橙色
-function comfortColor(label: string): string {
-  if (label === "舒適" || label === "微涼") return "#86efac";
-  if (label === "悶熱" || label === "寒冷") return "#fb923c";
-  return "#fcd34d";
-}
-
-function evaporationColor(label: string): string {
-  if (label === "強") return "#fb923c";
-  if (label === "弱") return "#e2e8f0";
-  return "#fcd34d";
-}
+import { aqiColor, comfortColor, evaporationColor } from "@/lib/weatherStyle";
 
 /* 帶圖示的量測值：圖示在左，標籤在上、數值在下 */
 function Metric({

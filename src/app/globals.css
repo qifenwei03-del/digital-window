@@ -10,3 +10,174 @@ body {
   background: #000;
   color: #ededed;
 }
+
+/*
+  玻璃面板，四個面板共用。
+
+  分三個層級：主卡（hero）最實、一般卡（base）居中、輔助小卡（quiet）最輕。
+  沒有層級的話整頁會變成一堆權重相同的毛玻璃盒子，視線沒有落點。
+  各層級只覆寫下面這組變數，本體規則不重複。
+
+  尺寸全部用 cqw，容器是舞台那層 @container，換螢幕會等比縮放。
+*/
+.glass {
+  --glass-tint: 0.1; /* 面的白色底調 */
+  --glass-glow: 0.12; /* 邊緣往內的柔光 */
+  --glass-edge: 0.33; /* 細光邊亮度 */
+  --glass-lift: 0.16; /* 外投影濃度 */
+  --glass-shade: 0.1; /* 底色壓暗；必須跟著層級走，否則輕量卡會被壓成暗塊 */
+
+  position: relative;
+  background-color: rgb(0 0 0 / var(--glass-shade));
+  background-image: linear-gradient(
+    158deg,
+    rgb(255 255 255 / var(--glass-tint)) 0%,
+    rgb(255 255 255 / calc(var(--glass-tint) * 0.28)) 42%,
+    rgb(0 0 0 / calc(var(--glass-shade) * 0.45)) 100%
+  );
+  box-shadow:
+    /*
+      邊緣往內暈開的柔光，左上強右下弱，跟面的受光方向一致。
+      用 inset box-shadow 而不是模糊的偽元素 —— 絕對定位的偽元素會疊在文字之上
+      糊到字，inset shadow 屬於背景層，一定畫在內容之下。
+    */
+    inset 0.2cqw 0.2cqw 0.9cqw rgb(255 255 255 / var(--glass-glow)),
+    inset -0.26cqw -0.26cqw 1cqw rgb(255 255 255 / calc(var(--glass-glow) * 0.55)),
+    /* 上緣內側高光，刻意壓低避免變成一條硬白線 */ inset 0 0.06cqw 0
+      rgb(255 255 255 / calc(var(--glass-edge) * 0.3)),
+    /* 外投影收斂：散開範圍大、濃度低，才不會有「特效感」 */
+      0 0.35cqw 1.3cqw rgb(0 0 0 / var(--glass-lift));
+}
+
+.glass-hero {
+  --glass-tint: 0.15;
+  --glass-glow: 0.16;
+  --glass-edge: 0.5;
+  --glass-lift: 0.24;
+  --glass-shade: 0.13;
+  --glass-sat: 1.5;
+  --glass-bright: 1.5;
+  --glass-veil: 0.12;
+}
+
+.glass-quiet {
+  --glass-tint: 0.06;
+  --glass-glow: 0.07;
+  --glass-edge: 0.19;
+  --glass-lift: 0.08;
+  --glass-shade: 0.035;
+  --glass-sat: 1.25;
+  --glass-bright: 1.22;
+  --glass-veil: 0.05;
+}
+
+/*
+  鏡緣：邊緣一圈對「背景本身」做濾鏡，而不是再塗一層白。
+
+  以「提亮」為主、「加濃」為輔：飽和度拉太高會把明度壓下去，看起來像黑了一圈。
+  另外疊一層極淡的白紗當保險，確保鏡緣永遠比卡片內部亮，不會反過來變暗。
+  背景一變，邊角就跟著變 ——
+  這是 CSS 能做到最接近「玻璃對背景有反應」的效果。
+  真正的折射位移要 displacement map，backdrop-filter 沒有這個能力。
+
+  鏡緣寬度小於卡片的 padding，所以只會蓋在留白上，不會糊到文字。
+*/
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgb(255 255 255 / var(--glass-veil, 0.09));
+  /*
+    必須連 blur 一起帶：父層的 backdrop-blur 會建立 backdrop root，
+    ::after 自己的 backdrop-filter 濾的是那層之外的「原始影片」而不是已霧化的底。
+    少了 blur，鏡緣就會顯示沒霧化、比較暗的影片，在明亮的霧面旁邊變成一圈暗帶。
+  */
+  backdrop-filter: blur(0.7cqw) saturate(var(--glass-sat, 1.4)) brightness(var(--glass-bright, 1.4));
+  /*
+    四邊各自往內淡出後取聯集，中央因為四道漸層都已透明所以不受影響。
+    不用 content-box 挖環：那會在離邊固定距離處硬切一刀，
+    看起來是一條「帶子」而不是光從邊緣暈進來。
+    淡出距離用 cqw 而非 %，大小不同的卡片才會有一致的收斂。
+  */
+  mask-image:
+    /* 最上層：沿 138° 只在對角兩端保留，中段壓到 18% —— 讓反光有位置，不是均勻一整圈 */
+    linear-gradient(
+      138deg,
+      #000 0%,
+      #000 16%,
+      rgb(0 0 0 / 0.18) 36%,
+      rgb(0 0 0 / 0.18) 64%,
+      #000 84%,
+      #000 100%
+    ),
+    linear-gradient(to right, #000, transparent 2.6cqw),
+    linear-gradient(to left, #000, transparent 2.6cqw),
+    linear-gradient(to bottom, #000, transparent 2.6cqw),
+    linear-gradient(to top, #000, transparent 2.6cqw);
+  /* 四道邊緣淡出取聯集，再與對角線遮罩取交集 */
+  mask-composite: intersect, add, add, add;
+  pointer-events: none;
+}
+
+/*
+  邊緣細光條。用 mask 把漸層方塊挖成一圈 hairline，
+  單色 border 做不出「同一圈上亮度不均」的效果。
+  ::before 是第一個子元素，疊在底色之上、內容之下。
+*/
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 0.05cqw;
+  /* 高光集中成兩處亮點，不是整圈平滑漸變 —— 平滑漸變會顯得像描邊而不是反光 */
+  background: linear-gradient(
+    138deg,
+    rgb(255 255 255 / calc(var(--glass-edge) * 0.22)) 0%,
+    rgb(255 255 255 / var(--glass-edge)) 7%,
+    rgb(255 255 255 / calc(var(--glass-edge) * 0.28)) 18%,
+    rgb(255 255 255 / calc(var(--glass-edge) * 0.1)) 40%,
+    rgb(255 255 255 / calc(var(--glass-edge) * 0.09)) 58%,
+    rgb(255 255 255 / calc(var(--glass-edge) * 0.2)) 74%,
+    rgb(255 255 255 / calc(var(--glass-edge) * 0.92)) 92%,
+    rgb(255 255 255 / calc(var(--glass-edge) * 0.28)) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/*
+  文字階層。大字乾淨、小字克制、說明字淡 —— 差異靠字重與透明度拉開，
+  而不是只靠字級，這樣同一張卡裡的資訊才有明確的先後順序。
+*/
+.t-label {
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: rgb(255 255 255 / 0.62);
+}
+
+.t-value {
+  font-weight: 400;
+  letter-spacing: 0;
+  color: rgb(255 255 255 / 0.96);
+}
+
+.t-display {
+  font-weight: 200;
+  letter-spacing: -0.02em;
+  color: rgb(255 255 255 / 0.98);
+}
+
+.t-caption {
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: rgb(255 255 255 / 0.5);
+}

@@ -6,6 +6,7 @@ import WeatherCard from "@/components/WeatherCard";
 import WeatherDashboard from "@/components/WeatherDashboard";
 import WeatherDetail from "@/components/WeatherDetail";
 import WeatherAmbient from "@/components/WeatherAmbient";
+import WeatherBoard from "@/components/WeatherBoard";
 import { useWeather } from "@/lib/useWeather";
 
 // GitHub Pages 部署在子路徑下，靜態資源需加上 basePath
@@ -14,13 +15,14 @@ const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 // 鍵盤 1、2… 依序切換
 const VIDEOS = [1, 2, 3, 4].map((n) => `${BASE_PATH}/videos/${n}.mp4`);
 
-// A、S、D、F 各自對應一個面板，直接選取；預設同 A
-type Panel = "compact" | "dashboard" | "detail" | "ambient";
+// A、S、D、F、G 各自對應一個面板，直接選取；預設同 A
+type Panel = "compact" | "dashboard" | "detail" | "ambient" | "board";
 const PANEL_KEYS: Record<string, Panel> = {
   a: "compact",
   s: "dashboard",
   d: "detail",
   f: "ambient",
+  g: "board",
 };
 
 export default function Home() {
@@ -53,11 +55,12 @@ export default function Home() {
             <WeatherCard weather={weather} failed={failed} />
           </div>
         ) : (
-          /* 其餘三種都是滿版 */
+          /* 其餘四種都是滿版 */
           <div className="absolute inset-0">
             {panel === "dashboard" && <WeatherDashboard weather={weather} failed={failed} />}
             {panel === "detail" && <WeatherDetail weather={weather} failed={failed} />}
             {panel === "ambient" && <WeatherAmbient weather={weather} failed={failed} />}
+            {panel === "board" && <WeatherBoard weather={weather} failed={failed} />}
           </div>
         )}
       </div>
