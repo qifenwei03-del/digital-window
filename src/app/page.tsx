@@ -57,6 +57,7 @@ export default function Home() {
   const [videoIndex, setVideoIndex] = useState(0);
   const [panel, setPanel] = useState<Panel>("compact");
   const [display, setDisplay] = useState<Display>("normal");
+  const [showStatus, setShowStatus] = useState(false);
   const { weather, failed } = useWeather();
   const portrait = usePortrait();
 
@@ -73,6 +74,12 @@ export default function Home() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
+
+      // 佈場用的狀態角標，預設不顯示
+      if (key === "i") {
+        setShowStatus((on) => !on);
+        return;
+      }
 
       // 同一鍵再按一次回到一般顯示，否則進了裁切就沒有退路
       const nextDisplay = DISPLAY_KEYS[key];
@@ -145,8 +152,9 @@ export default function Home() {
         </main>
       </div>
 
-      {/* 只在裁切模式顯示，確認這台是哪一半、有沒有連上同步 */}
-      {cropping && (
+      {/* 佈場時用來確認這台是哪一半、有沒有連上同步。
+          預設隱藏，展場不該看到；按 I 叫出來。 */}
+      {cropping && showStatus && (
         <p className="pointer-events-none fixed bottom-2 left-2 z-50 rounded bg-black/50 px-2 py-1 font-mono text-[11px] text-white/70">
           {display === "left" ? "L" : "R"} · sync {connected ? "on" : "off"}
         </p>
