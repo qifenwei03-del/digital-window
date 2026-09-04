@@ -138,37 +138,44 @@ function StatRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string
   );
 }
 
+/*
+  折線圖。線是用 clip-path 裁出來的帶狀填色，不是 SVG 描邊。原因有兩層：
+
+  1. 原本是 viewBox 非等比拉伸（preserveAspectRatio="none"）搭
+     vectorEffect="non-scaling-stroke"。那組合會讓 Chrome 每次繪製都在非等比
+     變換下重算描邊幾何，疊在播放中的影片圖層上會閃動 —— S 與 D 曾是唯二用
+     這個組合的面板，也正好是唯二會閃的。
+  2. 改成「量像素再給等比 viewBox」也不行：ResizeObserver 綁在算繪迴圈上，
+     頁面被節流時完全不觸發（實測 0 次），線會整條消失，比閃動更糟。
+
+  clip-path 的百分比是相對元素框，不必量像素也不會被節流影響，而且是填色
+  不是描邊，沒有描邊幾何要重算。
+*/
+const TREND_HALF_WIDTH = 1.8; // 線半寬，單位是容器高度的 %
+
 function TrendLine({ hourly }: { hourly: HourPoint[] }) {
   const temps = hourly.map((h) => h.temperature);
   const max = Math.max(...temps);
   const min = Math.min(...temps);
   const span = max - min || 1;
-  const x = (i: number) => (i + 0.5) * (100 / hourly.length);
-  const y = (t: number) => 22 + (1 - (t - min) / span) * 56;
+  const fx = (i: number) => ((i + 0.5) / hourly.length) * 100;
+  const fy = (t: number) => (0.22 + (1 - (t - min) / span) * 0.56) * 100;
+
+  const upper = temps.map((t, i) => `${fx(i)}% ${fy(t) - TREND_HALF_WIDTH}%`);
+  const lower = temps.map((t, i) => `${fx(i)}% ${fy(t) + TREND_HALF_WIDTH}%`).reverse();
 
   return (
     <div className="relative h-[5cqw] w-full">
-      <svg
-        className="absolute inset-0 h-full w-full"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
+      <div
+        className="absolute inset-0 bg-white/85"
+        style={{ clipPath: `polygon(${[...upper, ...lower].join(", ")})` }}
         aria-hidden
-      >
-        <polyline
-          points={temps.map((t, i) => `${x(i)},${y(t)}`).join(" ")}
-          fill="none"
-          stroke="rgba(255,255,255,0.85)"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
+      />
       {temps.map((t, i) => (
         <span
           key={hourly[i].time}
           className="absolute size-[0.7cqw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white"
-          style={{ left: `${x(i)}%`, top: `${y(t)}%` }}
+          style={{ left: `${fx(i)}%`, top: `${fy(t)}%` }}
         />
       ))}
     </div>
