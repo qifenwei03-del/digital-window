@@ -133,7 +133,9 @@ export default function Home() {
       ) : (
         /* 其餘四種都是滿版 */
         <div className="absolute inset-0">
-          {panel === "dashboard" && <WeatherDashboard weather={weather} failed={failed} />}
+          {panel === "dashboard" && (
+            <WeatherDashboard weather={weather} failed={failed} crop={cropping} />
+          )}
           {panel === "detail" && <WeatherDetail weather={weather} failed={failed} />}
           {panel === "ambient" && <WeatherAmbient weather={weather} failed={failed} />}
           {panel === "board" && <WeatherBoard weather={weather} failed={failed} />}

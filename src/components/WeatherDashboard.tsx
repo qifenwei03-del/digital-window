@@ -162,9 +162,12 @@ function SunArc({ progress }: { progress: number }) {
 export default function WeatherDashboard({
   weather,
   failed,
+  crop = false,
 }: {
   weather: Weather | null;
   failed: boolean;
+  /** 雙螢幕裁切：卡片分成左右兩組，中間留出接縫間隙 */
+  crop?: boolean;
 }) {
   if (!weather) {
     return (
@@ -185,140 +188,202 @@ export default function WeatherDashboard({
     { icon: Smile, label: "舒適度", value: w.comfort },
   ];
 
+  const heroCard = (
+    <Card
+      className={`glass-hero flex min-h-0 flex-col ${crop ? "flex-[1.45]" : "col-span-2 row-span-2"}`}
+    >
+      <p className="text-[1.6cqw] t-label">{w.city}</p>
+      <div className="mt-[0.8cqw] flex items-start justify-between">
+        <span className="text-[7.5cqw] t-display leading-none">{w.temperature}°</span>
+        <WeatherGlyph
+          code={w.weatherCode}
+          isDay={w.isDay}
+          className="size-[4.5cqw] t-value"
+          strokeWidth={1.2}
+        />
+      </div>
+      <p className="mt-[1.4cqw] text-[1.8cqw]">
+        {w.description}
+        <span className="ml-[1.2cqw] t-label">體感 {w.feelsLike}°</span>
+      </p>
+      <p className="mt-auto text-[1.5cqw] t-caption">
+        最高 {w.tempMax}° <span className="mx-[0.8cqw] text-white/40">/</span> 最低 {w.tempMin}°
+      </p>
+    </Card>
+  );
+
+  const metrics = (
+    <>
+      <Metric icon={Wind} label="風速" value={String(w.windSpeed)} unit="km/h" />
+      <Metric icon={Droplets} label="濕度" value={`${w.humidity}%`} />
+      <Metric icon={Umbrella} label="降雨機率" value={`${w.precipitationProbability}%`} />
+      <Metric icon={CloudRain} label="降雨量" value={String(w.precipitation)} unit="mm" />
+      <Metric icon={Eye} label="能見度" value={String(w.visibility)} unit="km" />
+      <Metric icon={Gauge} label="氣壓" value={String(w.pressure)} unit="hPa" />
+    </>
+  );
+
+  const aqiCard = (
+    <Card className="flex min-h-0 flex-1 flex-col">
+      <CardTitle icon={Leaf} label="空氣品質" />
+      <div className="mt-[0.8cqw] flex items-baseline gap-[0.8cqw]">
+        <span className="text-[5cqw] t-display leading-none">{w.aqi ?? "—"}</span>
+        <span className="text-[1.6cqw] t-label">{w.aqiLabel ?? ""}</span>
+      </div>
+      <p className="mt-[1.4cqw] text-[1.2cqw] t-caption">
+        PM2.5
+        {w.pm25 !== null && <span className="ml-[0.6cqw]">{w.pm25} μg/m³</span>}
+      </p>
+      <div
+        className="relative mt-[0.7cqw] h-[0.7cqw] rounded-full"
+        style={{ background: "linear-gradient(to right,#34d399,#fbbf24,#fb923c,#ef4444)" }}
+      >
+        <span
+          className="absolute top-1/2 size-[1.3cqw] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.18cqw] border-white bg-white/90"
+          style={{ left: `${aqiPercent}%` }}
+        />
+      </div>
+      <p className="mt-auto text-[1.2cqw] t-caption">
+        主要污染物 <span className="t-value">{w.dominantPollutant ?? "—"}</span>
+      </p>
+    </Card>
+  );
+
+  const sunCard = (
+    <Card className="flex min-h-0 flex-col">
+      <CardTitle icon={Sunrise} label="日出日落" />
+      <div className="mt-[0.8cqw] grid grid-cols-2 divide-x divide-white/15 text-center">
+        <div>
+          <p className="text-[1.2cqw] t-caption">日出</p>
+          <p className="mt-[0.3cqw] text-[2.2cqw] t-display">{w.sunrise}</p>
+        </div>
+        <div>
+          <p className="text-[1.2cqw] t-caption">日落</p>
+          <p className="mt-[0.3cqw] text-[2.2cqw] t-display">{w.sunset}</p>
+        </div>
+      </div>
+      <SunArc progress={w.sunProgress} />
+      <p className="mt-auto text-center text-[1.2cqw] t-caption">
+        日照進度 <span className="text-lime-300">{Math.round(w.sunProgress * 100)}%</span>
+      </p>
+    </Card>
+  );
+
+  const envCard = (
+    <Card className="flex min-h-0 flex-col">
+      <CardTitle icon={Leaf} label="環境狀態" />
+      <div className="mt-[0.6cqw] flex flex-1 flex-col justify-around">
+        {environment.map(({ icon: Icon, label, value }) => (
+          <div key={label} className="flex items-center justify-between">
+            <span className="flex items-center gap-[0.7cqw] text-[1.3cqw] t-caption">
+              <Icon className="size-[1.5cqw]" strokeWidth={1.6} aria-hidden />
+              {label}
+            </span>
+            <span className="text-[1.6cqw] t-value">{value}</span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+
+  const trendCard = (
+    <Card className="flex min-h-0 flex-1 flex-col">
+      <p className="text-[1.5cqw] t-label">未來 6 小時天氣趨勢</p>
+      <div className="mt-[1cqw] grid grid-cols-6 text-center text-[1.2cqw] t-caption">
+        {w.hourly.map((h) => (
+          <span key={h.time}>{h.time}</span>
+        ))}
+      </div>
+      <div className="mt-[0.8cqw] grid grid-cols-6 place-items-center">
+        {w.hourly.map((h) => (
+          <WeatherGlyph
+            key={h.time}
+            code={h.weatherCode}
+            isDay={h.isDay}
+            className="size-[2.2cqw] t-label"
+            strokeWidth={1.4}
+          />
+        ))}
+      </div>
+      <TrendLine hourly={w.hourly} />
+      <div className="grid grid-cols-6 text-center text-[2cqw] t-display">
+        {w.hourly.map((h) => (
+          <span key={h.time}>{h.temperature}°</span>
+        ))}
+      </div>
+      <div className="mt-[0.5cqw] grid grid-cols-6 place-items-center">
+        {w.hourly.map((h) => (
+          <span key={h.time} className="flex items-center gap-[0.3cqw] text-[1.1cqw] t-caption">
+            <Droplets className="size-[1.1cqw]" strokeWidth={1.6} aria-hidden />
+            {h.precipitationProbability}%
+          </span>
+        ))}
+      </div>
+    </Card>
+  );
+
+  // 裁切模式把它靠左，置中的話文字正好被接縫切開
+  const footer = (
+    <div
+      className={`flex items-center gap-[0.6cqw] text-[1.2cqw] t-caption ${
+        crop ? "justify-start" : "justify-center"
+      }`}
+    >
+      <span>資料更新時間 {w.updatedAt}</span>
+      <RefreshCw className="size-[1.2cqw]" strokeWidth={1.6} aria-hidden />
+    </div>
+  );
+
+  const shell = "flex h-full w-full flex-col gap-[1.6cqw] p-[4cqw] text-white";
+  const shadow = "[text-shadow:0_0.1cqw_0.25cqw_rgba(0,0,0,0.35)]";
+
+  /*
+    雙螢幕：卡片分成左右兩組，沒有一張跨過接縫。
+
+    外層 padding 左右對稱，所以 grid-cols-2 的間隙自然落在接縫正中央 ——
+    內容區中心就是畫布中心就是接縫，不必手算偏移。
+    每一半是窄高的區域（畫布 840 時約 420×840），所以卡片改成直向堆疊。
+    趨勢卡照設計允許跨接縫。
+  */
+  if (crop) {
+    return (
+      <div className={`${shell} ${shadow}`}>
+        <div className="grid min-h-0 flex-[2.6] grid-cols-2 gap-[5cqw]">
+          <div className="flex min-h-0 flex-col gap-[1.6cqw]">
+            {heroCard}
+            {aqiCard}
+          </div>
+          <div className="flex min-h-0 flex-col gap-[1.6cqw]">
+            <div className="grid min-h-0 flex-[1.45] grid-cols-2 gap-[1.6cqw]">{metrics}</div>
+            <div className="grid min-h-0 flex-1 grid-cols-2 gap-[1.6cqw]">
+              {sunCard}
+              {envCard}
+            </div>
+          </div>
+        </div>
+        {trendCard}
+        {footer}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full w-full flex-col gap-[1.6cqw] p-[4cqw] text-white [text-shadow:0_0.1cqw_0.25cqw_rgba(0,0,0,0.35)]">
+    <div className={`${shell} ${shadow}`}>
       {/* 現況 + 六項即時數值 */}
       <div className="grid flex-1 grid-cols-5 grid-rows-2 gap-[1.6cqw]">
-        <Card className="glass-hero col-span-2 row-span-2 flex flex-col">
-          <p className="text-[1.6cqw] t-label">{w.city}</p>
-          <div className="mt-[0.8cqw] flex items-start justify-between">
-            <span className="text-[7.5cqw] t-display leading-none">{w.temperature}°</span>
-            <WeatherGlyph
-              code={w.weatherCode}
-              isDay={w.isDay}
-              className="size-[4.5cqw] t-value"
-              strokeWidth={1.2}
-            />
-          </div>
-          <p className="mt-[1.4cqw] text-[1.8cqw]">
-            {w.description}
-            <span className="ml-[1.2cqw] t-label">體感 {w.feelsLike}°</span>
-          </p>
-          <p className="mt-auto text-[1.5cqw] t-caption">
-            最高 {w.tempMax}° <span className="mx-[0.8cqw] text-white/40">/</span> 最低 {w.tempMin}°
-          </p>
-        </Card>
-
-        <Metric icon={Wind} label="風速" value={String(w.windSpeed)} unit="km/h" />
-        <Metric icon={Droplets} label="濕度" value={`${w.humidity}%`} />
-        <Metric icon={Umbrella} label="降雨機率" value={`${w.precipitationProbability}%`} />
-        <Metric icon={CloudRain} label="降雨量" value={String(w.precipitation)} unit="mm" />
-        <Metric icon={Eye} label="能見度" value={String(w.visibility)} unit="km" />
-        <Metric icon={Gauge} label="氣壓" value={String(w.pressure)} unit="hPa" />
+        {heroCard}
+        {metrics}
       </div>
 
       {/* 空氣品質 / 日出日落 / 環境狀態 */}
       <div className="grid flex-1 grid-cols-3 gap-[1.6cqw]">
-        <Card className="flex flex-col">
-          <CardTitle icon={Leaf} label="空氣品質" />
-          <div className="mt-[0.8cqw] flex items-baseline gap-[0.8cqw]">
-            <span className="text-[5cqw] t-display leading-none">{w.aqi ?? "—"}</span>
-            <span className="text-[1.6cqw] t-label">{w.aqiLabel ?? ""}</span>
-          </div>
-          <p className="mt-[1.4cqw] text-[1.2cqw] t-caption">
-            PM2.5
-            {w.pm25 !== null && <span className="ml-[0.6cqw]">{w.pm25} μg/m³</span>}
-          </p>
-          <div
-            className="relative mt-[0.7cqw] h-[0.7cqw] rounded-full"
-            style={{ background: "linear-gradient(to right,#34d399,#fbbf24,#fb923c,#ef4444)" }}
-          >
-            <span
-              className="absolute top-1/2 size-[1.3cqw] -translate-x-1/2 -translate-y-1/2 rounded-full border-[0.18cqw] border-white bg-white/90"
-              style={{ left: `${aqiPercent}%` }}
-            />
-          </div>
-          <p className="mt-auto text-[1.2cqw] t-caption">
-            主要污染物 <span className="t-value">{w.dominantPollutant ?? "—"}</span>
-          </p>
-        </Card>
-
-        <Card className="flex flex-col">
-          <CardTitle icon={Sunrise} label="日出日落" />
-          <div className="mt-[0.8cqw] grid grid-cols-2 divide-x divide-white/15 text-center">
-            <div>
-              <p className="text-[1.2cqw] t-caption">日出</p>
-              <p className="mt-[0.3cqw] text-[2.2cqw] t-display">{w.sunrise}</p>
-            </div>
-            <div>
-              <p className="text-[1.2cqw] t-caption">日落</p>
-              <p className="mt-[0.3cqw] text-[2.2cqw] t-display">{w.sunset}</p>
-            </div>
-          </div>
-          <SunArc progress={w.sunProgress} />
-          <p className="mt-auto text-center text-[1.2cqw] t-caption">
-            日照進度 <span className="text-lime-300">{Math.round(w.sunProgress * 100)}%</span>
-          </p>
-        </Card>
-
-        <Card className="flex flex-col">
-          <CardTitle icon={Leaf} label="環境狀態" />
-          <div className="mt-[0.6cqw] flex flex-1 flex-col justify-around">
-            {environment.map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex items-center justify-between">
-                <span className="flex items-center gap-[0.7cqw] text-[1.3cqw] t-caption">
-                  <Icon className="size-[1.5cqw]" strokeWidth={1.6} aria-hidden />
-                  {label}
-                </span>
-                <span className="text-[1.6cqw] t-value">{value}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
+        {aqiCard}
+        {sunCard}
+        {envCard}
       </div>
 
-      {/* 未來 6 小時趨勢 */}
-      <Card className="flex flex-1 flex-col">
-        <p className="text-[1.5cqw] t-label">未來 6 小時天氣趨勢</p>
-        <div className="mt-[1cqw] grid grid-cols-6 text-center text-[1.2cqw] t-caption">
-          {w.hourly.map((h) => (
-            <span key={h.time}>{h.time}</span>
-          ))}
-        </div>
-        <div className="mt-[0.8cqw] grid grid-cols-6 place-items-center">
-          {w.hourly.map((h) => (
-            <WeatherGlyph
-              key={h.time}
-              code={h.weatherCode}
-              isDay={h.isDay}
-              className="size-[2.2cqw] t-label"
-              strokeWidth={1.4}
-            />
-          ))}
-        </div>
-        <TrendLine hourly={w.hourly} />
-        <div className="grid grid-cols-6 text-center text-[2cqw] t-display">
-          {w.hourly.map((h) => (
-            <span key={h.time}>{h.temperature}°</span>
-          ))}
-        </div>
-        <div className="mt-[0.5cqw] grid grid-cols-6 place-items-center">
-          {w.hourly.map((h) => (
-            <span
-              key={h.time}
-              className="flex items-center gap-[0.3cqw] text-[1.1cqw] t-caption"
-            >
-              <Droplets className="size-[1.1cqw]" strokeWidth={1.6} aria-hidden />
-              {h.precipitationProbability}%
-            </span>
-          ))}
-        </div>
-      </Card>
-
-      <div className="flex items-center justify-center gap-[0.6cqw] text-[1.2cqw] t-caption">
-        <span>資料更新時間 {w.updatedAt}</span>
-        <RefreshCw className="size-[1.2cqw]" strokeWidth={1.6} aria-hidden />
-      </div>
+      {trendCard}
+      {footer}
     </div>
   );
 }
