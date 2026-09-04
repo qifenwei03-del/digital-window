@@ -63,6 +63,8 @@ export default function Home() {
   const [panel, setPanel] = useState<Panel>("compact");
   const [display, setDisplay] = useState<Display>("normal");
   const [showStatus, setShowStatus] = useState(false);
+  // 診斷用：關掉所有玻璃模糊，確認閃動是不是濾鏡負擔造成的
+  const [flatGlass, setFlatGlass] = useState(false);
   const { weather, failed } = useWeather();
   const portrait = usePortrait();
 
@@ -83,6 +85,12 @@ export default function Home() {
       // 佈場用的狀態角標，預設不顯示
       if (key === "i") {
         setShowStatus((on) => !on);
+        return;
+      }
+
+      // 診斷用：關掉玻璃模糊。閃動如果因此停止，就確定是濾鏡負擔
+      if (key === "q") {
+        setFlatGlass((flat) => !flat);
         return;
       }
 
@@ -135,7 +143,11 @@ export default function Home() {
   );
 
   return (
-    <div className="relative h-dvh w-screen overflow-hidden bg-black">
+    <div
+      className="relative h-dvh w-screen overflow-hidden bg-black"
+      data-crop={cropping ? "1" : undefined}
+      data-glass={flatGlass ? "flat" : undefined}
+    >
       {cropping ? (
         /*
           裁切模式：舞台直接絕對定位，不包一層虛擬畫布。
@@ -171,7 +183,8 @@ export default function Home() {
           預設隱藏，展場不該看到；按 I 叫出來。 */}
       {cropping && showStatus && (
         <p className="pointer-events-none fixed bottom-2 left-2 z-50 rounded bg-black/50 px-2 py-1 font-mono text-[11px] text-white/70">
-          {display === "left" ? "L" : "R"} · sync {connected ? "on" : "off"}
+          {display === "left" ? "L" : "R"} · sync {connected ? "on" : "off"} · glass{" "}
+          {flatGlass ? "flat" : "on"}
         </p>
       )}
     </div>

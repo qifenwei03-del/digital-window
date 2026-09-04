@@ -82,6 +82,22 @@ body {
 
   鏡緣寬度小於卡片的 padding，所以只會蓋在留白上，不會糊到文字。
 */
+/*
+  裁切模式的舞台是一般模式的 4 倍面積（邊長兩倍），每張卡兩層 backdrop-filter
+  疊在 4K 影片上，每一格的濾鏡工作量也跟著變 4 倍 —— 這是目前對「只有左右分割
+  會閃」最合理的解釋。所以裁切時把鏡緣的濾鏡關掉，只留白紗，濾鏡層數砍半。
+  一般模式維持完整品質。
+*/
+[data-crop="1"] .glass::after {
+  backdrop-filter: none;
+}
+
+/* 診斷用：按 Q 連卡片模糊一起關，用來確認閃動是不是濾鏡負擔造成的 */
+[data-glass="flat"] .glass,
+[data-glass="flat"] .glass::after {
+  backdrop-filter: none;
+}
+
 .glass::after {
   content: "";
   position: absolute;
