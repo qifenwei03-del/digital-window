@@ -136,7 +136,9 @@ export default function Home() {
           {panel === "dashboard" && (
             <WeatherDashboard weather={weather} failed={failed} crop={cropping} />
           )}
-          {panel === "detail" && <WeatherDetail weather={weather} failed={failed} />}
+          {panel === "detail" && (
+            <WeatherDetail weather={weather} failed={failed} crop={cropping} />
+          )}
           {panel === "ambient" && <WeatherAmbient weather={weather} failed={failed} />}
           {panel === "board" && <WeatherBoard weather={weather} failed={failed} />}
         </div>
