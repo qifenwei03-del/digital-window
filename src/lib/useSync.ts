@@ -149,10 +149,19 @@ export function useSync({
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(payload));
   }, []);
 
-  // 本地場景變動就廣播；剛從遠端套用的那筆跳過，避免回彈
+  /*
+    本地場景變動就廣播；剛從遠端套用的那筆跳過，避免回彈。
+
+    送出後也要記進 appliedRef —— scene 每次 render 都是新的物件字面值，
+    而 clock 每 400ms 就觸發一次 re-render。少了這行，本地改過場景之後
+    每次 render 都會把同一筆再送一遍（實測 6 秒 14 則），還會持續對另一台
+    重新宣告舊狀態。所以 appliedRef 的語意是「已經達成共識的場景」，
+    不分是我送出的還是對方送來的。
+  */
   useEffect(() => {
     const payload = JSON.stringify(scene);
     if (payload === appliedRef.current) return;
+    appliedRef.current = payload;
     send({ t: "scene", ...scene });
   }, [scene, send]);
 
