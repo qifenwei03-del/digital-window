@@ -163,11 +163,14 @@ export default function WeatherDashboard({
   weather,
   failed,
   crop = false,
+  side,
 }: {
   weather: Weather | null;
   failed: boolean;
   /** 雙螢幕裁切：卡片分成左右兩組，中間留出接縫間隙 */
   crop?: boolean;
+  /** 這台看的是哪一半。另一半的卡片整個不 render，省下看不見的玻璃濾鏡工作 */
+  side?: "left" | "right";
 }) {
   if (!weather) {
     return (
@@ -349,16 +352,25 @@ export default function WeatherDashboard({
     return (
       <div className={`${shell} ${shadow}`}>
         <div className="grid min-h-0 flex-[2.6] grid-cols-2 gap-[5cqw]">
+          {/* 空的欄位仍然佔位，所以兩台的版面與縮放完全一致 */}
           <div className="flex min-h-0 flex-col gap-[1.6cqw]">
-            {heroCard}
-            {aqiCard}
+            {side !== "right" && (
+              <>
+                {heroCard}
+                {aqiCard}
+              </>
+            )}
           </div>
           <div className="flex min-h-0 flex-col gap-[1.6cqw]">
-            <div className="grid min-h-0 flex-[1.45] grid-cols-2 gap-[1.6cqw]">{metrics}</div>
-            <div className="grid min-h-0 flex-1 grid-cols-2 gap-[1.6cqw]">
-              {sunCard}
-              {envCard}
-            </div>
+            {side !== "left" && (
+              <>
+                <div className="grid min-h-0 flex-[1.45] grid-cols-2 gap-[1.6cqw]">{metrics}</div>
+                <div className="grid min-h-0 flex-1 grid-cols-2 gap-[1.6cqw]">
+                  {sunCard}
+                  {envCard}
+                </div>
+              </>
+            )}
           </div>
         </div>
         {trendCard}

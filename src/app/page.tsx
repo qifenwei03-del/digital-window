@@ -134,10 +134,20 @@ export default function Home() {
         /* 其餘四種都是滿版 */
         <div className="absolute inset-0">
           {panel === "dashboard" && (
-            <WeatherDashboard weather={weather} failed={failed} crop={cropping} />
+            <WeatherDashboard
+              weather={weather}
+              failed={failed}
+              crop={cropping}
+              side={cropping ? (display as "left" | "right") : undefined}
+            />
           )}
           {panel === "detail" && (
-            <WeatherDetail weather={weather} failed={failed} crop={cropping} />
+            <WeatherDetail
+              weather={weather}
+              failed={failed}
+              crop={cropping}
+              side={cropping ? (display as "left" | "right") : undefined}
+            />
           )}
           {panel === "ambient" && <WeatherAmbient weather={weather} failed={failed} />}
           {panel === "board" && <WeatherBoard weather={weather} failed={failed} />}
