@@ -26,6 +26,7 @@ body {
   --glass-edge: 0.33; /* 細光邊亮度 */
   --glass-lift: 0.16; /* 外投影濃度 */
   --glass-shade: 0.1; /* 底色壓暗；必須跟著層級走，否則輕量卡會被壓成暗塊 */
+  --glass-frost: 0.14; /* 裁切模式改用不透明白堆面感時的濃度 */
 
   position: relative;
   background-color: rgb(0 0 0 / var(--glass-shade));
@@ -55,6 +56,7 @@ body {
   --glass-edge: 0.5;
   --glass-lift: 0.24;
   --glass-shade: 0.13;
+  --glass-frost: 0.2;
   --glass-sat: 1.5;
   --glass-bright: 1.5;
   --glass-veil: 0.12;
@@ -66,6 +68,7 @@ body {
   --glass-edge: 0.19;
   --glass-lift: 0.08;
   --glass-shade: 0.035;
+  --glass-frost: 0.08;
   --glass-sat: 1.25;
   --glass-bright: 1.22;
   --glass-veil: 0.05;
@@ -83,13 +86,47 @@ body {
   鏡緣寬度小於卡片的 padding，所以只會蓋在留白上，不會糊到文字。
 */
 /*
-  裁切模式的舞台是一般模式的 4 倍面積（邊長兩倍），每張卡兩層 backdrop-filter
-  疊在 4K 影片上，每一格的濾鏡工作量也跟著變 4 倍 —— 這是目前對「只有左右分割
-  會閃」最合理的解釋。所以裁切時把鏡緣的濾鏡關掉，只留白紗，濾鏡層數砍半。
-  一般模式維持完整品質。
+  裁切模式完全不用 backdrop-filter。
+
+  實測確認：在雙螢幕分割下把模糊關掉就不閃了。原因是舞台面積變成一般模式的
+  4 倍（邊長兩倍），每張卡又疊了兩層濾鏡在 4K 影片上，每一格的濾鏡工作量跟著
+  變 4 倍，來不及畫完就成了閃動。
+
+  改用帶透明度的白色堆出面感：純粹是合成一層半透明色，沒有任何逐格重算的成本。
+  底下的暗色也一起加重 —— 少了模糊，文字失去了「背景被抹平」的保護，
+  必須靠壓暗把對比補回來，否則白字壓在亮處的影片上會讀不到。
 */
+[data-crop="1"] .glass,
 [data-crop="1"] .glass::after {
   backdrop-filter: none;
+}
+
+[data-crop="1"] .glass {
+  /*
+    「下限 + 層級差」而不是單純乘倍數。層級系統刻意讓 quiet 卡很淡，
+    有模糊時那是輕盈，沒有模糊時就變成整片樹葉直接透過來。
+    給每張卡一個可讀的底，層級的先後順序仍然保留。
+  */
+  background-color: rgb(0 0 0 / calc(0.2 + var(--glass-shade) * 1.6));
+  background-image: linear-gradient(
+    158deg,
+    rgb(255 255 255 / var(--glass-frost)) 0%,
+    rgb(255 255 255 / calc(var(--glass-frost) * 0.62)) 52%,
+    rgb(255 255 255 / calc(var(--glass-frost) * 0.4)) 100%
+  );
+}
+
+/*
+  最淡的兩階文字在裁切模式要提亮。模糊原本會把背景抹平，說明字才撐得住 50%
+  白；只靠壓暗解決不了「背景很雜」，而繼續加暗會讓卡片變成不透明方塊、
+  失去窗景的意義。所以改成動文字，不動卡片。
+*/
+[data-crop="1"] .t-caption {
+  color: rgb(255 255 255 / 0.74);
+}
+
+[data-crop="1"] .t-label {
+  color: rgb(255 255 255 / 0.84);
 }
 
 /* 診斷用：按 Q 連卡片模糊一起關，用來確認閃動是不是濾鏡負擔造成的 */
