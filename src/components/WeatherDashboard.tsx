@@ -364,7 +364,8 @@ export default function WeatherDashboard({
           <div className="flex min-h-0 flex-col gap-[1.6cqw]">
             {side !== "left" && (
               <>
-                <div className="grid min-h-0 flex-[1.45] grid-cols-2 gap-[1.6cqw]">{metrics}</div>
+                {/* 1.62 而非 1.45：六張小卡的數值在 1.45 時會壓到卡片下緣 */}
+                <div className="grid min-h-0 flex-[1.62] grid-cols-2 gap-[1.6cqw]">{metrics}</div>
                 <div className="grid min-h-0 flex-1 grid-cols-2 gap-[1.6cqw]">
                   {sunCard}
                   {envCard}

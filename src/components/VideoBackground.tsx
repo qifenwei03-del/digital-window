@@ -10,6 +10,8 @@ type Props = {
   onPublishClock?: (videoIndex: number, time: number) => void;
   /** 遠端的播放時間，跟隨端用來校正 */
   clock?: RemoteClock | null;
+  /** 顯示中的影片第一次真的開始播（有畫面了）時呼叫一次，用來收掉載入畫面 */
+  onFirstFrame?: () => void;
 };
 
 const PUBLISH_INTERVAL_MS = 400;
@@ -23,8 +25,11 @@ export default function VideoBackground({
   activeIndex,
   onPublishClock,
   clock,
+  onFirstFrame,
 }: Props) {
   const refs = useRef<(HTMLVideoElement | null)[]>([]);
+  // 只回報一次；之後切換影片不該再觸發載入畫面
+  const firstFrameSent = useRef(false);
 
   useEffect(() => {
     // 只讓顯示中的那支解碼；其餘暫停但保留已下載的緩衝，
@@ -97,6 +102,17 @@ export default function VideoBackground({
     if (next && !next.src) next.src = sources[i + 1];
   };
 
+  /*
+    用 playing 而不是 canplaythrough 當「可以露臉了」的訊號。
+    canplaythrough 只保證資料夠，畫面不一定已經上去；playing 是真的開始出畫格，
+    這樣載入畫面收掉的瞬間底下一定已經是動的影像，不會閃一格黑或靜止首格。
+  */
+  const handlePlaying = (i: number) => () => {
+    if (i !== activeIndex || firstFrameSent.current) return;
+    firstFrameSent.current = true;
+    onFirstFrame?.();
+  };
+
   return (
     <>
       {sources.map((src, i) => (
@@ -110,6 +126,7 @@ export default function VideoBackground({
           playsInline
           preload="auto"
           onCanPlayThrough={preloadNext(i)}
+          onPlaying={handlePlaying(i)}
           className={`absolute inset-0 h-full w-full object-cover ${
             i === activeIndex ? "" : "invisible"
           }`}

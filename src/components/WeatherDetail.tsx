@@ -227,8 +227,9 @@ export default function WeatherDetail({
   const daylightHours = Math.floor(w.daylightMinutes / 60);
   const daylightRest = w.daylightMinutes % 60;
 
+  // 裁切模式的 flex 比一般模式略低：左欄下方的空氣品質卡內容量大，需要那幾 px
   const heroCard = (
-    <Card className={`${crop ? "glass-hero flex-[1.55]" : "glass-hero col-span-4 row-span-2"} flex min-h-0 flex-col`}>
+    <Card className={`${crop ? "glass-hero flex-[1.45]" : "glass-hero col-span-4 row-span-2"} flex min-h-0 flex-col`}>
       <p className="flex items-center gap-[0.6cqw] text-[1.8cqw]">
         <MapPin className="size-[1.8cqw] t-caption" strokeWidth={1.5} aria-hidden />
         {w.city}
@@ -296,7 +297,15 @@ export default function WeatherDetail({
           />
         )}
       </div>
-      <div className="mt-[1.8cqw] flex flex-col gap-[0.7cqw]">
+      {/*
+        裁切模式下這張卡只有一半螢幕的高度，四列直排會撐破卡片（實測溢出 65px）。
+        改成 2×2 並把主要污染物併成一行，省下的高度剛好夠 —— 資訊一項沒少。
+      */}
+      <div
+        className={`mt-[1.8cqw] gap-[0.7cqw] ${
+          crop ? "grid grid-cols-2 gap-x-[1.4cqw]" : "flex flex-col"
+        }`}
+      >
         {[
           { label: "PM2.5", value: w.pm25 },
           { label: "PM10", value: w.pm10 },
@@ -309,8 +318,17 @@ export default function WeatherDetail({
           </div>
         ))}
       </div>
-      <p className="mt-auto text-[1.1cqw] t-caption">主要污染物</p>
-      <p className="text-[1.5cqw] t-value">{w.dominantPollutant ?? "—"}</p>
+      {crop ? (
+        <p className="mt-auto flex items-baseline justify-between">
+          <span className="text-[1.1cqw] t-caption">主要污染物</span>
+          <span className="text-[1.5cqw] t-value">{w.dominantPollutant ?? "—"}</span>
+        </p>
+      ) : (
+        <>
+          <p className="mt-auto text-[1.1cqw] t-caption">主要污染物</p>
+          <p className="text-[1.5cqw] t-value">{w.dominantPollutant ?? "—"}</p>
+        </>
+      )}
     </Card>
   );
 

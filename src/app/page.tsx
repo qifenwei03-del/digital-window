@@ -42,6 +42,9 @@ const DISPLAY_KEYS: Record<string, Display> = { l: "left", r: "right" };
 // 完整畫布（兩台合併）能容納的正方形邊長
 const STAGE_SIDE = "min(200vw, 100dvh)";
 
+// 載入畫面最多蓋這麼久，之後不管載到哪都放行（見 Home 裡的說明）
+const GATE_TIMEOUT_MS = 10000;
+
 // 視口是不是直式；裁切只在直式時生效，桌面橫式維持原樣
 function usePortrait() {
   return useSyncExternalStore(
@@ -65,8 +68,26 @@ export default function Home() {
   const [showStatus, setShowStatus] = useState(false);
   // 診斷用：關掉所有玻璃模糊，確認閃動是不是濾鏡負擔造成的
   const [flatGlass, setFlatGlass] = useState(false);
+  const [videoStarted, setVideoStarted] = useState(false);
+  const [gateTimedOut, setGateTimedOut] = useState(false);
   const { weather, failed } = useWeather();
   const portrait = usePortrait();
+
+  /*
+    載入閘門。開場那幾秒影片還在抓、天氣還沒回來，面板會先以骨架狀態出現再跳成
+    實際數值，展場看起來像出錯。改成整片黑幕蓋住，等影片真的開始播、天氣也有結果
+    才淡出。
+
+    逾時是必要的保險：自動播放被擋、或影片抓不到時 playing 事件永遠不會來，
+    沒有逾時的話展示螢幕會整晚停在黑幕上。寧可露出未完成的畫面，也不能全黑。
+  */
+  const ready = (videoStarted && (weather !== null || failed)) || gateTimedOut;
+  const handleFirstFrame = useCallback(() => setVideoStarted(true), []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setGateTimedOut(true), GATE_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   const applyRemoteScene = useCallback((next: Scene) => {
     setVideoIndex(next.videoIndex);
@@ -124,6 +145,7 @@ export default function Home() {
         activeIndex={videoIndex}
         onPublishClock={isClockSource ? publishClock : undefined}
         clock={isClockSource ? null : clock}
+        onFirstFrame={handleFirstFrame}
       />
       {panel === "compact" ? (
         /* 左上 1/4 區塊 */
@@ -149,8 +171,10 @@ export default function Home() {
               side={cropping ? (display as "left" | "right") : undefined}
             />
           )}
-          {panel === "ambient" && <WeatherAmbient weather={weather} failed={failed} />}
-          {panel === "board" && <WeatherBoard weather={weather} failed={failed} />}
+          {panel === "ambient" && (
+            <WeatherAmbient weather={weather} failed={failed} crop={cropping} />
+          )}
+          {panel === "board" && <WeatherBoard weather={weather} failed={failed} crop={cropping} />}
         </div>
       )}
     </>
@@ -192,6 +216,17 @@ export default function Home() {
           <div className="@container relative aspect-square h-full max-h-[100vw]">{stage}</div>
         </main>
       )}
+
+      {/* 載入黑幕。蓋住整個視窗（含 1:1 舞台外的黑邊），淡出後就不再回來。
+          留在 DOM 裡但設 opacity 0，避免卸載時觸發一次額外的重繪。 */}
+      <div
+        aria-hidden
+        className={`pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-black transition-opacity duration-[900ms] ${
+          ready ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        <p className="text-[1.6vmin] tracking-[0.45em] text-white/40">載入中</p>
+      </div>
 
       {/* 佈場時用來確認這台是哪一半、有沒有連上同步。
           預設隱藏，展場不該看到；按 I 叫出來。 */}
