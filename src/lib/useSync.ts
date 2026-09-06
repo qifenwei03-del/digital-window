@@ -10,7 +10,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
   所以 GitHub Pages 那份靜態部署不會因為沒有 sync server 而壞掉。
 */
 
-export type Scene = { videoIndex: number; panel: string };
+/*
+  跨裝置共享的場景。刻意不含 display（L／R）—— 那是每台自己看哪一半，
+  同步過去等於兩台看同一半，反而壞掉。玻璃模式則要一致，否則兩半質感不同。
+*/
+export type Scene = { videoIndex: number; panel: string; flatGlass: boolean };
 
 export type RemoteClock = {
   videoIndex: number;
@@ -125,7 +129,12 @@ export function useSync({
           typeof msg.videoIndex === "number" &&
           typeof msg.panel === "string"
         ) {
-          const next = { videoIndex: msg.videoIndex, panel: msg.panel };
+          // flatGlass 用 === true 取值：舊版本的 client 不會送這個欄位
+          const next = {
+            videoIndex: msg.videoIndex,
+            panel: msg.panel,
+            flatGlass: msg.flatGlass === true,
+          };
           appliedRef.current = JSON.stringify(next);
           onRemoteRef.current(next);
         } else if (msg.t === "clock" && typeof msg.videoIndex === "number" && typeof msg.time === "number") {

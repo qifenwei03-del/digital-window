@@ -92,10 +92,11 @@ export default function Home() {
   const applyRemoteScene = useCallback((next: Scene) => {
     setVideoIndex(next.videoIndex);
     setPanel(next.panel as Panel);
+    setFlatGlass(next.flatGlass);
   }, []);
 
   const { clock, publishClock, connected } = useSync({
-    scene: { videoIndex, panel },
+    scene: { videoIndex, panel, flatGlass },
     onRemoteScene: applyRemoteScene,
   });
 
@@ -109,7 +110,7 @@ export default function Home() {
         return;
       }
 
-      // 診斷用：關掉玻璃模糊。閃動如果因此停止，就確定是濾鏡負擔
+      // 關掉玻璃模糊的備援模式。會同步到另一台 —— 兩半的質感必須一致
       if (key === "q") {
         setFlatGlass((flat) => !flat);
         return;

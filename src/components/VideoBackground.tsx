@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { RemoteClock } from "@/lib/useSync";
 
 type Props = {
@@ -19,6 +19,15 @@ const PUBLISH_INTERVAL_MS = 400;
 const SEEK_THRESHOLD_S = 0.5;
 /** 這個秒差以內不動，避免一直微調造成抖動 */
 const IN_SYNC_S = 0.06;
+/** 開場先讓播放中的那支獨佔資源這麼久，再開始預載其餘影片 */
+const PRELOAD_START_MS = 6000;
+/** 之後每多載一支之間的間隔 */
+const PRELOAD_GAP_MS = 4000;
+/**
+ * 影片始終沒開始播時，預載仍然要啟動。自動播放被擋的話 playing 永遠不會來，
+ * 少了這道保險就再也不會預載任何一支，切換時每次都得從頭抓。
+ */
+const PRELOAD_FALLBACK_MS = 12000;
 
 export default function VideoBackground({
   sources,
@@ -30,6 +39,17 @@ export default function VideoBackground({
   const refs = useRef<(HTMLVideoElement | null)[]>([]);
   // 只回報一次；之後切換影片不該再觸發載入畫面
   const firstFrameSent = useRef(false);
+  // 預載排程要在開始播之後才啟動，所以這裡需要的是會觸發 render 的狀態
+  const [preloadArmed, setPreloadArmed] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setPreloadArmed(true), PRELOAD_FALLBACK_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  // 預載排程讀得到最新的 activeIndex，但不因為它變動而重跑
+  const activeIndexRef = useRef(activeIndex);
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
 
   useEffect(() => {
     // 只讓顯示中的那支解碼；其餘暫停但保留已下載的緩衝，
@@ -96,11 +116,36 @@ export default function VideoBackground({
     }
   }, [clock, activeIndex]);
 
-  // 依序預載：載完一支才開始下一支。六支同時抓會把開場的頻寬吃光。
-  const preloadNext = (i: number) => () => {
-    const next = refs.current[i + 1];
-    if (next && !next.src) next.src = sources[i + 1];
-  };
+  /*
+    預載其餘影片。
+
+    原本是鏈式的：某支 canplaythrough 就指定下一支的 src。看起來是「載完一支
+    才載下一支」，實際上不是 —— canplaythrough 只表示「以目前速率估計能播完」，
+    不必等整支下載完就會觸發。實測六支在 1.2 秒內全部開始下載
+    （527/663/768/888/1080/1191ms），等於開場同時有六個下載與六個解多工器在跑，
+    而合成器正在對舞台做 backdrop-filter。這就是前幾秒偶爾閃動的來源，
+    也解釋了為什麼不是每次都閃：檔案在不在快取裡決定了負擔差多少。
+
+    改成用時間排程。播放中的那支先獨佔資源幾秒，之後每隔幾秒才多載一支。
+    切換仍然是即時的：真的切到還沒載的那支時，上面的 effect 會當場指定 src。
+  */
+  useEffect(() => {
+    if (!preloadArmed) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let delay = PRELOAD_START_MS;
+    sources.forEach((src, i) => {
+      if (i === activeIndexRef.current) return;
+      timers.push(
+        setTimeout(() => {
+          const video = refs.current[i];
+          if (video && !video.src) video.src = src;
+        }, delay)
+      );
+      delay += PRELOAD_GAP_MS;
+    });
+    return () => timers.forEach(clearTimeout);
+    // activeIndex 用 ref 讀：切換影片不該把預載排程整個重來
+  }, [preloadArmed, sources]);
 
   /*
     用 playing 而不是 canplaythrough 當「可以露臉了」的訊號。
@@ -110,6 +155,7 @@ export default function VideoBackground({
   const handlePlaying = (i: number) => () => {
     if (i !== activeIndex || firstFrameSent.current) return;
     firstFrameSent.current = true;
+    setPreloadArmed(true);
     onFirstFrame?.();
   };
 
@@ -125,7 +171,6 @@ export default function VideoBackground({
           loop
           playsInline
           preload="auto"
-          onCanPlayThrough={preloadNext(i)}
           onPlaying={handlePlaying(i)}
           className={`absolute inset-0 h-full w-full object-cover ${
             i === activeIndex ? "" : "invisible"
