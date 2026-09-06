@@ -229,11 +229,17 @@ export default function Home() {
       </div>
 
       {/* 佈場時用來確認這台是哪一半、有沒有連上同步。
-          預設隱藏，展場不該看到；按 I 叫出來。 */}
-      {cropping && showStatus && (
+          預設隱藏，展場不該看到；按 I 叫出來。
+
+          不限裁切模式 —— 同步沒連上時畫面上看不出任何異狀，兩台就這樣各走各的，
+          而一般模式下反而最需要先確認 relay 有沒有起來。 */}
+      {showStatus && (
         <p className="pointer-events-none fixed bottom-2 left-2 z-50 rounded bg-black/50 px-2 py-1 font-mono text-[11px] text-white/70">
-          {display === "left" ? "L" : "R"} · sync {connected ? "on" : "off"} · glass{" "}
-          {flatGlass ? "flat" : "on"}
+          {cropping ? (display === "left" ? "L" : "R") : "full"} · sync{" "}
+          <span className={connected ? "text-emerald-300" : "text-red-300"}>
+            {connected ? "on" : "off"}
+          </span>{" "}
+          · glass {flatGlass ? "flat" : "on"}
         </p>
       )}
     </div>

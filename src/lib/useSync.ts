@@ -19,11 +19,22 @@ export type RemoteClock = {
   sentAt: number;
 };
 
-// 預設連到頁面所在主機的 8787 埠 —— 兩台電視都從展場機器開頁面時零設定即可運作
+/*
+  relay 位址的決定順序：網址參數 → 建置時的環境變數 → 頁面所在主機的 8787 埠。
+
+  預設值讓「兩台電視都從展場機器開頁面」零設定就能運作。
+  網址參數是給 relay 不在頁面主機上的情況用的 —— 環境變數在建置時就固定了，
+  部署完改不了，展場現場沒辦法為了換一個 IP 重新建置。
+
+  注意：https 頁面連 ws:// 會被瀏覽器當成混合內容擋掉。所以雙螢幕展場請從
+  本機以 http 提供頁面，不要開 GitHub Pages 那個網址（那份是預覽用的）。
+*/
 function resolveUrl(): string {
+  if (typeof window === "undefined") return "";
+  const fromQuery = new URLSearchParams(window.location.search).get("sync");
+  if (fromQuery) return fromQuery;
   const explicit = process.env.NEXT_PUBLIC_SYNC_URL;
   if (explicit) return explicit;
-  if (typeof window === "undefined") return "";
   const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
   return `${scheme}//${window.location.hostname}:8787`;
 }
