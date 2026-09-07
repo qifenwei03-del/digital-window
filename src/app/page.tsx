@@ -192,20 +192,32 @@ export default function Home() {
         所有尺寸同步縮小。硬把 1:1 的版面壓進 1.45:1 的上段玻璃會撐破卡片
         （實測 S 溢出 129px、D 469px、G 920px），縮放則一項資訊都不必刪。
       */}
-      <div
-        className="@container absolute aspect-square"
-        style={{
-          width: `${SAFE_SQUARE.size}%`,
-          top: `${SAFE_SQUARE.top}%`,
-          left: `${SAFE_SQUARE.left}%`,
-        }}
-      >
-        {panel === "compact" ? (
-          /* 左上 1/4 區塊 */
-          <div className="absolute left-0 top-0 h-1/2 w-1/2 p-[3cqw]">
-            <WeatherCard weather={weather} failed={failed} />
-          </div>
-        ) : (
+      {panel === "compact" ? (
+        /*
+          A 不進安全區正方形。
+
+          它本來就是一張靠左上的小卡，而安全區是水平置中的 —— 放進去會被推到
+          畫面正中央，失去「窗角上的一張卡」那個構圖。所以改成直接貼著上段玻璃
+          的左上角，只讓開上框；尺寸維持以舞台為基準，跟先前一樣大。
+
+          寬度收在中梃之內：容器佔舞台一半，扣掉 3cqw 內距後卡片右緣約在 47%，
+          而中梃從 48.6% 才開始。
+        */
+        <div
+          className="absolute left-0 h-1/2 w-1/2 p-[3cqw]"
+          style={{ top: `${FRAME_BANDS.upper.top}%` }}
+        >
+          <WeatherCard weather={weather} failed={failed} />
+        </div>
+      ) : (
+        <div
+          className="@container absolute aspect-square"
+          style={{
+            width: `${SAFE_SQUARE.size}%`,
+            top: `${SAFE_SQUARE.top}%`,
+            left: `${SAFE_SQUARE.left}%`,
+          }}
+        >
           <div className="absolute inset-0">
             {panel === "dashboard" && (
             <WeatherDashboard
@@ -230,8 +242,8 @@ export default function Home() {
               <WeatherBoard weather={weather} failed={failed} crop={cropping} />
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </>
   );
 
