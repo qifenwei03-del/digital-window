@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import WeatherArt from "./WeatherArt";
 import type { HourPoint, Weather } from "@/lib/weather";
-import { railRows } from "@/lib/frame";
+import { MULLION_CQW, railRows, splitTrendX } from "@/lib/frame";
 
 /* ---------- 月相：用 mask 疊出亮面，比用兩段弧線拼路徑好推理 ---------- */
 
@@ -154,19 +154,28 @@ function StatRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string
 */
 const TREND_HALF_WIDTH = 1.8; // 線半寬，單位是容器高度的 %
 
-function TrendLine({ hourly }: { hourly: HourPoint[] }) {
+function TrendLine({
+  hourly,
+  xs,
+  height = 5,
+}: {
+  hourly: HourPoint[];
+  xs?: number[];
+  height?: number;
+}) {
   const temps = hourly.map((h) => h.temperature);
   const max = Math.max(...temps);
   const min = Math.min(...temps);
   const span = max - min || 1;
-  const fx = (i: number) => ((i + 0.5) / hourly.length) * 100;
+  // xs 有值代表卡片被中梃拆成兩半：點位不是均分六欄，得照實際欄位中心給
+  const fx = (i: number) => (xs ? xs[i] : ((i + 0.5) / hourly.length) * 100);
   const fy = (t: number) => (0.22 + (1 - (t - min) / span) * 0.56) * 100;
 
   const upper = temps.map((t, i) => `${fx(i)}% ${fy(t) - TREND_HALF_WIDTH}%`);
   const lower = temps.map((t, i) => `${fx(i)}% ${fy(t) + TREND_HALF_WIDTH}%`).reverse();
 
   return (
-    <div className="relative h-[5cqw] w-full">
+    <div className="relative w-full" style={{ height: `${height}cqw` }}>
       <div
         className="absolute inset-0 bg-white/85"
         style={{ clipPath: `polygon(${[...upper, ...lower].join(", ")})` }}
@@ -389,37 +398,76 @@ export default function WeatherDetail({
     </Card>
   );
 
-  const trendCard = (
-  <Card className="flex min-h-0 flex-1 flex-col">
-    <p className="text-[1.4cqw] t-label">未來 6 小時天氣趨勢</p>
-    <div className="mt-[0.8cqw] grid grid-cols-6 text-center text-[1.15cqw] t-caption">
-      {w.hourly.map((h) => (
-        <span key={h.time}>{h.time}</span>
-      ))}
-    </div>
-    <div className="mt-[0.6cqw] grid grid-cols-6 place-items-center">
-      {w.hourly.map((h) => (
-        <WeatherArt key={h.time} code={h.weatherCode} isDay={h.isDay} className="w-[5cqw]" />
-      ))}
-    </div>
-    <TrendLine hourly={w.hourly} />
-    <div className="grid grid-cols-6 text-center text-[1.7cqw] t-display">
-      {w.hourly.map((h) => (
-        <span key={h.time}>{h.temperature}°</span>
-      ))}
-    </div>
-    <div className="mt-auto grid grid-cols-6 place-items-center border-t border-white/12 pt-[0.7cqw]">
-      {w.hourly.map((h) => (
-        <span
-          key={h.time}
-          className="flex items-center gap-[0.35cqw] text-[1.15cqw] t-caption"
+  /*
+    趨勢卡。裁切模式下拆成左右兩張，間隙正好等於中梃寬 —— 卡片本身不跨過框料，
+    只有折線跨過去（實際上是被兩張卡各自裁掉，斷點正好落在中梃上）。
+    兩張卡的內部結構必須一模一樣，折線高度才對得齊，所以右邊留一個不可見的標題。
+    中橫杆以下只有約 19% 的高度，所以裁切版把行距與線高一起收緊，列數一項沒少。
+  */
+  const TREND_X = splitTrendX(3.5, 1.95);
+
+  const trendPanel = (half?: "left" | "right") => {
+    const hours =
+      half === "left" ? w.hourly.slice(0, 3) : half === "right" ? w.hourly.slice(3) : w.hourly;
+    const cols = half ? "grid-cols-3" : "grid-cols-6";
+    const xs = half === "left" ? TREND_X.left : half === "right" ? TREND_X.right : undefined;
+    const tight = Boolean(half);
+    return (
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <p className={`text-[1.4cqw] t-label ${half === "right" ? "invisible" : ""}`}>
+          未來 6 小時天氣趨勢
+        </p>
+        <div
+          className={`grid ${cols} text-center text-[1.15cqw] t-caption ${
+            tight ? "mt-[0.3cqw]" : "mt-[0.8cqw]"
+          }`}
         >
-          <Droplet className="size-[1.15cqw] text-sky-300" strokeWidth={1.6} aria-hidden />
-          {h.precipitationProbability}%
-        </span>
-      ))}
+          {hours.map((h) => (
+            <span key={h.time}>{h.time}</span>
+          ))}
+        </div>
+        <div className={`grid ${cols} place-items-center ${tight ? "mt-[0.2cqw]" : "mt-[0.6cqw]"}`}>
+          {hours.map((h) => (
+            <WeatherArt
+              key={h.time}
+              code={h.weatherCode}
+              isDay={h.isDay}
+              className={tight ? "w-[3.2cqw]" : "w-[5cqw]"}
+            />
+          ))}
+        </div>
+        {/* 負 margin 撐出卡片內距，折線才畫得到卡片邊緣 */}
+        <div className={half ? "-mx-[1.95cqw]" : ""}>
+          <TrendLine hourly={w.hourly} xs={xs} height={tight ? 3 : 5} />
+        </div>
+        <div className={`grid ${cols} text-center text-[1.7cqw] t-display`}>
+          {hours.map((h) => (
+            <span key={h.time}>{h.temperature}°</span>
+          ))}
+        </div>
+        <div
+          className={`mt-auto grid ${cols} place-items-center border-t border-white/12 ${
+            tight ? "pt-[0.3cqw]" : "pt-[0.7cqw]"
+          }`}
+        >
+          {hours.map((h) => (
+            <span key={h.time} className="flex items-center gap-[0.35cqw] text-[1.15cqw] t-caption">
+              <Droplet className="size-[1.15cqw] text-sky-300" strokeWidth={1.6} aria-hidden />
+              {h.precipitationProbability}%
+            </span>
+          ))}
+        </div>
+      </Card>
+    );
+  };
+
+  const trendCard = trendPanel();
+
+  const trendSplit = (
+    <div className="grid min-h-0 flex-1 grid-cols-2" style={{ gap: `${MULLION_CQW}cqw` }}>
+      {trendPanel("left")}
+      {trendPanel("right")}
     </div>
-  </Card>
   );
 
   const shell = "flex h-full w-full flex-col gap-[1.4cqw] p-[3.5cqw] text-white";
@@ -433,7 +481,7 @@ export default function WeatherDetail({
   if (crop) {
     return (
       <div
-        className={`h-full w-full p-[3.5cqw] text-white ${shadow}`}
+        className={`relative h-full w-full p-[3.5cqw] text-white ${shadow}`}
         style={{ display: "grid", gridTemplateRows: railRows(3.5) }}
       >
         {/*
@@ -468,11 +516,11 @@ export default function WeatherDetail({
           </div>
         </div>
         <div aria-hidden />
-        <div className="flex min-h-0 flex-col gap-[1.4cqw]">
-          {trendCard}
-          {/* 裁切時靠左，置中的話文字正好被接縫切開 */}
-          <p className="text-left text-[1.15cqw] t-label">資料更新 {w.updatedAt}</p>
-        </div>
+        {/* 整列都給趨勢卡：更新時間改放在面板底部的內距裡（仍在下段玻璃內） */}
+        {trendSplit}
+        <p className="absolute bottom-[0.5cqw] left-[3.5cqw] text-[1.15cqw] t-label">
+          資料更新 {w.updatedAt}
+        </p>
       </div>
     );
   }

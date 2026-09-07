@@ -148,3 +148,39 @@ export function railRows(padCqw: number): string {
   const band = ((RAIL_IN_SAFE.bottom - RAIL_IN_SAFE.top) / inner) * 100;
   return `${top.toFixed(2)}% ${band.toFixed(2)}% 1fr`;
 }
+
+/**
+ * 中梃寬度，換算成安全區的 cqw。
+ * 趨勢卡拆成左右兩張時用它當間隙 —— 斷點才正好落在中梃上、被實體框料遮住。
+ */
+export const MULLION_CQW =
+  ((FRAME_BANDS.mullion.right - FRAME_BANDS.mullion.left) / SIDE) * 100;
+
+/*
+  趨勢卡拆成左右兩張之後，折線的 x 座標。
+
+  折線要看起來連續，但兩張卡各自獨立、中間隔著中梃。做法是：兩張卡都畫「完整的
+  六個點」，只是 x 起點差一張卡寬 —— 各自被自己的卡片裁掉，拼起來就是一條線，
+  唯一的斷點正好落在中梃上。
+
+  座標必須對齊實際的欄位中心，不能當成均分的六欄：每張卡內部是三欄、還有自己的
+  內距，和「整段均分六份」不一樣。所以這裡從面板內距、卡片內距、間隙一路算出來。
+
+  回傳的百分比是相對「卡片外框」——折線容器用負 margin 撐出內距，
+  這樣線能畫到卡片邊緣，中間只缺中梃那一段。
+*/
+export function splitTrendX(panelPadCqw: number, cardPadCqw: number) {
+  const region = 100 - panelPadCqw * 2;
+  const gap = MULLION_CQW;
+  const card = (region - gap) / 2;
+  const content = card - cardPadCqw * 2;
+  const base = [0, 1, 2].map(
+    (i) => ((cardPadCqw + ((i + 0.5) / 3) * content) / card) * 100
+  );
+  const shift = ((card + gap) / card) * 100;
+  return {
+    gap,
+    left: [...base, ...base.map((b) => b + shift)],
+    right: [...base.map((b) => b - shift), ...base],
+  };
+}
