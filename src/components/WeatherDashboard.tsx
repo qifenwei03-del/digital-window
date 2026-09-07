@@ -25,6 +25,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { HourPoint, Weather } from "@/lib/weather";
+import { railRows } from "@/lib/frame";
 
 // 直接回傳 JSX，不把圖示指派給大寫變數 —— 那會被 react-hooks/static-components 視為
 // 在 render 期間建立元件
@@ -350,8 +351,17 @@ export default function WeatherDashboard({
   */
   if (crop) {
     return (
-      <div className={`${shell} ${shadow}`}>
-        <div className="grid min-h-0 flex-[2.6] grid-cols-2 gap-[5cqw]">
+      <div
+        className={`h-full w-full p-[4cqw] text-white ${shadow}`}
+        style={{ display: "grid", gridTemplateRows: railRows(4) }}
+      >
+        {/*
+          中橫杆是一道橫向的接縫。實體框料會擋住這一段，字落在裡面就等於消失，
+          所以把版面切成「上半段 / 橫杆（留空） / 下半段」三列 ——
+          和垂直接縫（中梃、兩台電視之間）完全同一套手法。
+          列高由 railRows() 從窗框尺寸算出，改施工圖數字這裡會自己跟著走。
+        */}
+        <div className="grid min-h-0 grid-cols-2 gap-[5cqw]">
           {/* 空的欄位仍然佔位，所以兩台的版面與縮放完全一致 */}
           <div className="flex min-h-0 flex-col gap-[1.6cqw]">
             {side !== "right" && (
@@ -374,8 +384,11 @@ export default function WeatherDashboard({
             )}
           </div>
         </div>
-        {trendCard}
-        {footer}
+        <div aria-hidden />
+        <div className="flex min-h-0 flex-col gap-[1.6cqw]">
+          {trendCard}
+          {footer}
+        </div>
       </div>
     );
   }

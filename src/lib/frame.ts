@@ -61,18 +61,17 @@ export const FRAME_BANDS = {
 /*
   UI 的可用區。
 
-  上段玻璃是 1420 × 980（約 1.45:1），而整套面板是為 1:1 設計並逐一驗證過的。
-  硬把它壓進 65% 的高度會撐破卡片（實測 S 溢出 129px、D 469px、G 920px）。
+  第一版把正方形塞進「上段玻璃」（邊長只有框高的 65.3%），結果 UI 縮成一小塊
+  擠在畫面中央 —— 上下框以外的整片玻璃都空著，不像窗景，像貼了張卡片。
 
-  所以改成「把一個正方形塞進上段玻璃」：邊長等於上段玻璃的高度，水平置中。
-  版面比例一格未動，所有 cqw 只是同步縮小 —— 資訊一項沒少，也不必為了框
-  重新設計四個面板。代價是字會小一些（邊長從框寬的 100% 變成 69%）。
+  改成只讓開上下框：邊長 = (1500 − 60 − 60) / 1500 = 92%。這樣 UI 幾乎填滿
+  整扇窗，而且仍然是 1:1 —— 版面比例一格未動，四個面板不必重排。
+  裁切時每半是 46% × 92%，長寬比 0.5，正好就是裁切版面原本設計的比例。
 
-  這一層自己也是 @container，所以 cqw 改以它為基準。
-  正方形置中於舞台，中線仍然對齊中梃與兩台電視的接縫，
-  S 與 D 的「兩半各自成組」因此依然成立。
+  中橫杆改用「橫向接縫」處理：它橫過正方形的 71.0% ~ 76.8%，內容在那一段
+  留空即可 —— 跟垂直接縫（中梃／兩台電視之間）完全同一套手法。
 */
-const SIDE = (FRAME.upperGlass / FRAME.outerHeight) * 100;
+const SIDE = ((FRAME.outerHeight - FRAME.topRail - FRAME.bottomRail) / FRAME.outerHeight) * 100;
 
 export const SAFE_SQUARE = {
   /** 佔舞台的百分比 */
@@ -80,3 +79,28 @@ export const SAFE_SQUARE = {
   top: FRAME_BANDS.upper.top,
   left: (100 - SIDE) / 2,
 } as const;
+
+/**
+ * 中橫杆在「安全區正方形」裡的位置（佔正方形高的百分比）。
+ * 面板用它讓內容在這一段留空，框料才不會切到字。
+ */
+export const MID_RAIL_IN_SAFE = {
+  top: ((FRAME_BANDS.midRail.top - FRAME_BANDS.upper.top) / SIDE) * 100,
+  bottom: ((FRAME_BANDS.midRail.bottom - FRAME_BANDS.upper.top) / SIDE) * 100,
+} as const;
+
+/*
+  把中橫杆換算到「面板扣掉 padding 之後的內容區」座標。
+
+  各面板的外層 padding 不同（S 4cqw、D 3.5cqw、F 6cqw、G 4cqw），而 cqw 是
+  安全區寬度的 1%，安全區又是正方形 —— 所以 padding 佔內容區高度的比例
+  就等於那個 cqw 數字。
+
+  回傳可直接給 grid-template-rows 用的字串：上半段、橫杆（留空）、下半段。
+*/
+export function railRows(padCqw: number): string {
+  const inner = 100 - padCqw * 2;
+  const top = ((MID_RAIL_IN_SAFE.top - padCqw) / inner) * 100;
+  const band = ((MID_RAIL_IN_SAFE.bottom - MID_RAIL_IN_SAFE.top) / inner) * 100;
+  return `${top.toFixed(2)}% ${band.toFixed(2)}% 1fr`;
+}

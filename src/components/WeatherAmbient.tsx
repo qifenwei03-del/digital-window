@@ -16,6 +16,7 @@ import {
 import WeatherArt from "./WeatherArt";
 import type { HourPoint, Weather } from "@/lib/weather";
 import { aqiColor, comfortColor, evaporationColor } from "@/lib/weatherStyle";
+import { railRows } from "@/lib/frame";
 
 /* 帶圖示的量測值：圖示在左，標籤在上、數值在下 */
 function Metric({
@@ -100,18 +101,31 @@ function Field({
 }
 
 /* 底部趨勢：圖示之間用虛線接起來，中點放一個小圓點 */
-function TrendStrip({ hourly }: { hourly: HourPoint[] }) {
+function TrendStrip({ hourly, compact = false }: { hourly: HourPoint[]; compact?: boolean }) {
   return (
     <>
-      <div className="grid grid-cols-6 text-center text-[1.5cqw] text-white/80">
+      <div
+        className={`grid grid-cols-6 text-center text-white/80 ${
+          compact ? "text-[1.2cqw]" : "text-[1.5cqw]"
+        }`}
+      >
         {hourly.map((h) => (
           <span key={h.time}>{h.time}</span>
         ))}
       </div>
 
-      <div className="relative mt-[1.4cqw] grid grid-cols-6 place-items-center">
+      <div
+        className={`relative grid grid-cols-6 place-items-center ${
+          compact ? "mt-[0.6cqw]" : "mt-[1.4cqw]"
+        }`}
+      >
         {hourly.map((h) => (
-          <WeatherArt key={h.time} code={h.weatherCode} isDay={h.isDay} className="w-[6.5cqw]" />
+          <WeatherArt
+            key={h.time}
+            code={h.weatherCode}
+            isDay={h.isDay}
+            className={compact ? "w-[3.5cqw]" : "w-[6.5cqw]"}
+          />
         ))}
         {hourly.slice(0, -1).map((h, i) => (
           <span
@@ -127,7 +141,11 @@ function TrendStrip({ hourly }: { hourly: HourPoint[] }) {
         ))}
       </div>
 
-      <div className="mt-[1.4cqw] grid grid-cols-6 text-center text-[3cqw] font-light">
+      <div
+        className={`mt-[1.4cqw] grid grid-cols-6 text-center font-light ${
+          compact ? "text-[1.9cqw]" : "text-[3cqw]"
+        }`}
+      >
         {hourly.map((h) => (
           <span key={h.time}>{h.temperature}°</span>
         ))}
@@ -296,9 +314,10 @@ export default function WeatherAmbient({
   const shell =
     "flex h-full w-full flex-col bg-black/30 px-[6cqw] py-[6cqw] text-white [text-shadow:0_0.15cqw_0.45cqw_rgba(0,0,0,0.65)]";
 
+  // 裁切模式的趨勢要縮：中橫杆以下只有約 19% 的高度，原尺寸放不下（實測差 25px）
   const trend = (
-    <div className="mt-[2.5cqw] border-t border-white/20 pt-[2.8cqw]">
-      <TrendStrip hourly={w.hourly} />
+    <div className={`border-t border-white/20 ${crop ? "pt-[1cqw]" : "mt-[2.5cqw] pt-[2.8cqw]"}`}>
+      <TrendStrip hourly={w.hourly} compact={crop} />
     </div>
   );
 
@@ -319,7 +338,16 @@ export default function WeatherAmbient({
   */
   if (crop) {
     return (
-      <div className={shell}>
+      <div
+        className="h-full w-full bg-black/30 px-[6cqw] py-[6cqw] text-white [text-shadow:0_0.15cqw_0.45cqw_rgba(0,0,0,0.65)]"
+        style={{ display: "grid", gridTemplateRows: railRows(6) }}
+      >
+        {/*
+          中橫杆是一道橫向的接縫：實體框料會擋住這一段，字落在裡面等於消失。
+          版面切成「上半段 / 橫杆（留空）/ 下半段」三列，列高由 railRows()
+          從窗框尺寸算出 —— 和垂直接縫完全同一套手法。
+        */}
+        <div className="flex min-h-0 flex-col pb-[1cqw]">
         <div className="grid grid-cols-2 gap-[5cqw]">
           <Strip items={topMetrics.slice(0, 3)} />
           <Strip items={topMetrics.slice(3)} />
@@ -341,14 +369,18 @@ export default function WeatherAmbient({
           <Strip items={bottomMetrics.slice(0, 2)} />
           <Strip items={bottomMetrics.slice(2)} />
         </div>
+        </div>
 
-        {trend}
+        <div aria-hidden />
 
-        {/* 置中會壓在接縫上，所以只放在左半、置中於左半 */}
-        <div className="grid grid-cols-2 gap-[5cqw]">
-          <p className="mt-[2.5cqw] text-center text-[1.4cqw] text-white/80">
-            資料更新 {w.updatedAt}
-          </p>
+        <div className="flex min-h-0 flex-col justify-end">
+          {trend}
+          {/* 置中會壓在接縫上，所以只放在左半、置中於左半 */}
+          <div className="grid grid-cols-2 gap-[5cqw]">
+            <p className="mt-[1cqw] text-center text-[1.4cqw] text-white/80">
+              資料更新 {w.updatedAt}
+            </p>
+          </div>
         </div>
       </div>
     );

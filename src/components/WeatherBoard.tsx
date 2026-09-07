@@ -18,6 +18,7 @@ import {
 import WeatherArt from "./WeatherArt";
 import type { HourPoint, Weather } from "@/lib/weather";
 import { aqiColor, comfortColor, evaporationColor } from "@/lib/weatherStyle";
+import { railRows } from "@/lib/frame";
 
 function Card({ className = "", children }: { className?: string; children: ReactNode }) {
   return (
@@ -138,17 +139,17 @@ function TrendColumn({ hourly, compact = false }: { hourly: HourPoint[]; compact
       {hourly.map((h) => (
         <div
           key={h.time}
-          className={`flex flex-1 flex-col justify-center ${compact ? "py-[0.15cqw]" : "py-[0.4cqw]"}`}
+          className={`flex flex-1 flex-col justify-center ${compact ? "py-0" : "py-[0.4cqw]"}`}
         >
           <p className="t-caption text-[1.05cqw]">{h.time}</p>
           <div className="mt-[0.2cqw] flex items-center justify-between gap-[0.5cqw]">
             <WeatherArt
               code={h.weatherCode}
               isDay={h.isDay}
-              className={`shrink-0 ${compact ? "w-[2.7cqw]" : "w-[3.8cqw]"}`}
+              className={`shrink-0 ${compact ? "w-[2.3cqw]" : "w-[3.8cqw]"}`}
             />
             <div className="text-right">
-              <p className={`t-display leading-none ${compact ? "text-[1.8cqw]" : "text-[2.4cqw]"}`}>
+              <p className={`t-display leading-none ${compact ? "text-[1.6cqw]" : "text-[2.4cqw]"}`}>
                 {h.temperature}°
               </p>
               <p className="mt-[0.35cqw] flex items-center justify-end gap-[0.3cqw] text-[1.05cqw] t-caption">
@@ -261,7 +262,7 @@ export default function WeatherBoard({
   const sunCard = (
     <Card className="flex flex-1 flex-col p-[2cqw]">
             <p className="t-label text-[1.25cqw]">日照資訊</p>
-            <div className={`mt-[0.4cqw] ${crop ? "mx-auto w-[68%]" : ""}`}>
+            <div className={`mt-[0.4cqw] ${crop ? "mx-auto w-[56%]" : ""}`}>
               <DaylightArc progress={w.sunProgress} />
             </div>
             <div className="grid grid-cols-3 text-center">
@@ -290,11 +291,11 @@ export default function WeatherBoard({
   );
 
   const aqiCard = (
-    <Card className={`flex flex-col p-[2cqw] ${crop ? "flex-[1.5]" : "flex-[1.55]"}`}>
+    <Card className={`flex flex-col p-[2cqw] ${crop ? "flex-[1.15]" : "flex-[1.55]"}`}>
             <p className="t-label text-[1.25cqw]">空氣品質</p>
             <div
               className={`relative mx-auto mt-[0.6cqw] aspect-square min-h-0 flex-1 ${
-                crop ? "w-[44%]" : "w-[72%]"
+                crop ? "w-[33%]" : "w-[72%]"
               }`}
             >
               <AqiRing aqi={w.aqi} />
@@ -411,24 +412,41 @@ export default function WeatherBoard({
   */
   if (crop) {
     return (
-      <div className={shell}>
-        <div className="grid min-h-0 flex-1 grid-cols-2 gap-[5cqw]">
-          <div className="flex min-h-0 flex-col gap-[1.5cqw]">
-            {heroCard}
-            {sunCard}
-            <div className="grid flex-[0.5] grid-cols-2 gap-[1.5cqw]">
-              {windCard}
-              {gustCard}
+      <div className="h-full w-full p-[4cqw] text-white [text-shadow:0_0.1cqw_0.25cqw_rgba(0,0,0,0.4)]">
+        {/*
+          中橫杆是一道橫向的接縫：實體框料會擋住這一段，字落在裡面等於消失。
+          兩欄各自切成「上半段 / 橫杆（留空）/ 底部橫條」三列 ——
+          兩欄本來就都以一條五格指標作結，剛好可以整條退到杆下。
+          列高由 railRows() 從窗框尺寸算出，改施工圖數字這裡會自己跟著走。
+        */}
+        <div className="grid h-full grid-cols-2 gap-[5cqw]">
+          <div className="grid min-h-0" style={{ gridTemplateRows: railRows(4) }}>
+            <div className="flex min-h-0 flex-col gap-[1.5cqw]">
+              {heroCard}
+              {sunCard}
+              <div className="grid flex-[0.5] grid-cols-2 gap-[1.5cqw]">
+                {windCard}
+                {gustCard}
+              </div>
             </div>
-            {rainCard}
-            <MetricStrip items={[...topMetrics.slice(0, 3), ...bottomMetrics.slice(0, 2)]} />
+            <div aria-hidden />
+            {/* 降雨量挪到橫杆下：上半段本來差 110px，這張卡正好補上 */}
+            <div className="flex min-h-0 flex-col justify-end gap-[1.5cqw]">
+              {rainCard}
+              <MetricStrip items={[...topMetrics.slice(0, 3), ...bottomMetrics.slice(0, 2)]} />
+            </div>
           </div>
 
-          {/* 右欄只放三樣：AQI 環與六小時直排都不能再壓，降雨量因此挪到左欄 */}
-          <div className="flex min-h-0 flex-col gap-[1.5cqw]">
-            {aqiCard}
-            {trendCard}
-            <MetricStrip items={[...topMetrics.slice(3), ...bottomMetrics.slice(2)]} />
+          {/* 右欄只放兩樣：AQI 環與六小時直排都不能再壓，降雨量因此挪到左欄 */}
+          <div className="grid min-h-0" style={{ gridTemplateRows: railRows(4) }}>
+            <div className="flex min-h-0 flex-col gap-[1.5cqw]">
+              {aqiCard}
+              {trendCard}
+            </div>
+            <div aria-hidden />
+            <div className="flex min-h-0 flex-col justify-end">
+              <MetricStrip items={[...topMetrics.slice(3), ...bottomMetrics.slice(2)]} />
+            </div>
           </div>
         </div>
       </div>

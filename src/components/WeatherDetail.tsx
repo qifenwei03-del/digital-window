@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import WeatherArt from "./WeatherArt";
 import type { HourPoint, Weather } from "@/lib/weather";
+import { railRows } from "@/lib/frame";
 
 /* ---------- 月相：用 mask 疊出亮面，比用兩段弧線拼路徑好推理 ---------- */
 
@@ -431,8 +432,17 @@ export default function WeatherDetail({
   */
   if (crop) {
     return (
-      <div className={`${shell} ${shadow}`}>
-        <div className="grid min-h-0 flex-[3] grid-cols-2 gap-[5cqw]">
+      <div
+        className={`h-full w-full p-[3.5cqw] text-white ${shadow}`}
+        style={{ display: "grid", gridTemplateRows: railRows(3.5) }}
+      >
+        {/*
+          中橫杆是一道橫向的接縫。實體框料會擋住這一段，字落在裡面就等於消失，
+          所以把版面切成「上半段 / 橫杆（留空） / 下半段」三列 ——
+          和垂直接縫（中梃、兩台電視之間）完全同一套手法。
+          列高由 railRows() 從窗框尺寸算出，改施工圖數字這裡會自己跟著走。
+        */}
+        <div className="grid min-h-0 grid-cols-2 gap-[5cqw]">
           {/* 空的欄位仍然佔位，所以兩台的版面與縮放完全一致 */}
           <div className="flex min-h-0 flex-col gap-[1.4cqw]">
             {side !== "right" && (
@@ -457,9 +467,12 @@ export default function WeatherDetail({
             )}
           </div>
         </div>
-        {trendCard}
-        {/* 裁切時靠左，置中的話文字正好被接縫切開 */}
-        <p className="text-left text-[1.15cqw] t-label">資料更新 {w.updatedAt}</p>
+        <div aria-hidden />
+        <div className="flex min-h-0 flex-col gap-[1.4cqw]">
+          {trendCard}
+          {/* 裁切時靠左，置中的話文字正好被接縫切開 */}
+          <p className="text-left text-[1.15cqw] t-label">資料更新 {w.updatedAt}</p>
+        </div>
       </div>
     );
   }
