@@ -168,10 +168,10 @@ export default function Home() {
           ].map(({ band, label }) => (
             <div
               key={label}
-              className="absolute inset-x-0 flex items-center justify-center bg-amber-400/25 outline outline-[0.15cqw] outline-amber-300/60"
+              className="absolute inset-x-0 flex items-center justify-center bg-amber-400"
               style={{ top: `${band.top}%`, height: `${band.bottom - band.top}%` }}
             >
-              <span className="text-[1.1cqw] tracking-widest text-amber-100/80">{label}</span>
+              <span className="text-[1.1cqw] tracking-widest text-amber-900/70">{label}</span>
             </div>
           ))}
 
@@ -183,7 +183,7 @@ export default function Home() {
           ].map(({ from, to }) => (
             <div
               key={from}
-              className="absolute inset-y-0 bg-amber-400/25 outline outline-[0.15cqw] outline-amber-300/60"
+              className="absolute inset-y-0 bg-amber-400"
               style={{ left: `${from}%`, width: `${to - from}%` }}
             />
           ))}
@@ -226,29 +226,34 @@ export default function Home() {
             left: `${SAFE_SQUARE.left}%`,
           }}
         >
+          {/*
+            crop 一律為 true —— 它的意思是「框後面的版面」，不是「雙螢幕才用」。
+
+            實體窗框一直都在：中梃橫在正中線、中橫杆橫過畫面。一般模式若沿用
+            原本的多欄網格，卡片會被中梃剖開、折線整條被中橫杆蓋掉、更新時間
+            被下框吃掉 —— 實測確認過。所以兩種模式共用同一套框後版面。
+
+            side 才是雙螢幕專屬：只有真的裁切時才需要「另一半不 render」。
+          */}
           <div className="absolute inset-0">
             {panel === "dashboard" && (
-            <WeatherDashboard
-              weather={weather}
-              failed={failed}
-              crop={cropping}
-              side={cropping ? (display as "left" | "right") : undefined}
-            />
-          )}
-          {panel === "detail" && (
-            <WeatherDetail
-              weather={weather}
-              failed={failed}
-              crop={cropping}
-              side={cropping ? (display as "left" | "right") : undefined}
-            />
-          )}
-          {panel === "ambient" && (
-            <WeatherAmbient weather={weather} failed={failed} crop={cropping} />
-          )}
-            {panel === "board" && (
-              <WeatherBoard weather={weather} failed={failed} crop={cropping} />
+              <WeatherDashboard
+                weather={weather}
+                failed={failed}
+                crop
+                side={cropping ? (display as "left" | "right") : undefined}
+              />
             )}
+            {panel === "detail" && (
+              <WeatherDetail
+                weather={weather}
+                failed={failed}
+                crop
+                side={cropping ? (display as "left" | "right") : undefined}
+              />
+            )}
+            {panel === "ambient" && <WeatherAmbient weather={weather} failed={failed} crop />}
+            {panel === "board" && <WeatherBoard weather={weather} failed={failed} crop />}
           </div>
         </div>
       )}
@@ -296,11 +301,17 @@ export default function Home() {
           留在 DOM 裡但設 opacity 0，避免卸載時觸發一次額外的重繪。 */}
       <div
         aria-hidden
-        className={`pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-black transition-opacity duration-[900ms] ${
+        className={`pointer-events-none fixed inset-0 z-40 bg-black transition-opacity duration-[900ms] ${
           ready ? "opacity-0" : "opacity-100"
         }`}
       >
-        <p className="text-[1.6vmin] tracking-[0.45em] text-white/40">載入中</p>
+        {/*
+          不置中：置中的話字正好落在中梃後面（一般模式），或壓在邊料上（裁切模式）。
+          水平 30% 在三種模式下都落在玻璃區內。
+        */}
+        <p className="absolute left-[30%] top-1/2 -translate-y-1/2 text-[1.6vmin] tracking-[0.45em] text-white/40">
+          載入中
+        </p>
       </div>
 
       {/* 佈場時用來確認這台是哪一半、有沒有連上同步。
