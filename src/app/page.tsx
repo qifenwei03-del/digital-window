@@ -9,6 +9,7 @@ import WeatherAmbient from "@/components/WeatherAmbient";
 import WeatherBoard from "@/components/WeatherBoard";
 import { useWeather } from "@/lib/useWeather";
 import { useSync, type Scene } from "@/lib/useSync";
+import { FRAME_BANDS, SAFE_SQUARE } from "@/lib/frame";
 
 // GitHub Pages 部署在子路徑下，靜態資源需加上 basePath
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -66,6 +67,7 @@ export default function Home() {
   const [panel, setPanel] = useState<Panel>("compact");
   const [display, setDisplay] = useState<Display>("normal");
   const [showStatus, setShowStatus] = useState(false);
+  const [showFrame, setShowFrame] = useState(false);
   // 診斷用：關掉所有玻璃模糊，確認閃動是不是濾鏡負擔造成的
   const [flatGlass, setFlatGlass] = useState(false);
   const [videoStarted, setVideoStarted] = useState(false);
@@ -110,6 +112,12 @@ export default function Home() {
         return;
       }
 
+      // 佈場用：把實體窗框疊在畫面上，確認 UI 真的閃開了框料
+      if (key === "w") {
+        setShowFrame((on) => !on);
+        return;
+      }
+
       // 關掉玻璃模糊的備援模式。會同步到另一台 —— 兩半的質感必須一致
       if (key === "q") {
         setFlatGlass((flat) => !flat);
@@ -148,15 +156,58 @@ export default function Home() {
         clock={isClockSource ? null : clock}
         onFirstFrame={handleFirstFrame}
       />
-      {panel === "compact" ? (
-        /* 左上 1/4 區塊 */
-        <div className="absolute left-0 top-0 h-1/2 w-1/2 p-[3cqw]">
-          <WeatherCard weather={weather} failed={failed} />
+      {/* 佈場用：把實體窗框的框料疊出來，確認 UI 真的落在玻璃區內。
+          按 W 開關，展場不該看到。畫在舞台裡，所以會跟著裁切一起位移。 */}
+      {showFrame && (
+        <div className="pointer-events-none absolute inset-0 z-30" aria-hidden>
+          {[
+            { top: 0, bottom: 100 - FRAME_BANDS.upper.top, label: "上框" },
+            {
+              top: FRAME_BANDS.midRail.top,
+              bottom: 100 - FRAME_BANDS.midRail.bottom,
+              label: "中橫杆",
+            },
+            { top: FRAME_BANDS.lower.bottom, bottom: 0, label: "下框" },
+          ].map(({ top, bottom, label }) => (
+            <div
+              key={label}
+              className="absolute inset-x-0 flex items-center justify-center bg-amber-400/25 outline outline-[0.15cqw] outline-amber-300/60"
+              style={{ top: `${top}%`, bottom: `${bottom}%` }}
+            >
+              <span className="text-[1.1cqw] tracking-widest text-amber-100/80">{label}</span>
+            </div>
+          ))}
+          {/* 中梃：落在正中線，也就是兩台電視的接縫 */}
+          <div className="absolute inset-y-0 left-1/2 w-[1.4cqw] -translate-x-1/2 bg-amber-400/25 outline outline-[0.15cqw] outline-amber-300/60" />
         </div>
-      ) : (
-        /* 其餘四種都是滿版 */
-        <div className="absolute inset-0">
-          {panel === "dashboard" && (
+      )}
+
+      {/*
+        UI 的安全區：塞進實體窗框上段玻璃的正方形。
+
+        只有面板層內縮，影片維持滿版 —— 景色從框料後面延續過去正是窗景該有的
+        樣子，被擋住也不損失資訊；文字與卡片被框料切掉才是真的看不到。
+
+        這一層自己是 @container，所以 cqw 改以它為基準：版面比例一格未動，
+        所有尺寸同步縮小。硬把 1:1 的版面壓進 1.45:1 的上段玻璃會撐破卡片
+        （實測 S 溢出 129px、D 469px、G 920px），縮放則一項資訊都不必刪。
+      */}
+      <div
+        className="@container absolute aspect-square"
+        style={{
+          width: `${SAFE_SQUARE.size}%`,
+          top: `${SAFE_SQUARE.top}%`,
+          left: `${SAFE_SQUARE.left}%`,
+        }}
+      >
+        {panel === "compact" ? (
+          /* 左上 1/4 區塊 */
+          <div className="absolute left-0 top-0 h-1/2 w-1/2 p-[3cqw]">
+            <WeatherCard weather={weather} failed={failed} />
+          </div>
+        ) : (
+          <div className="absolute inset-0">
+            {panel === "dashboard" && (
             <WeatherDashboard
               weather={weather}
               failed={failed}
@@ -175,9 +226,12 @@ export default function Home() {
           {panel === "ambient" && (
             <WeatherAmbient weather={weather} failed={failed} crop={cropping} />
           )}
-          {panel === "board" && <WeatherBoard weather={weather} failed={failed} crop={cropping} />}
-        </div>
-      )}
+            {panel === "board" && (
+              <WeatherBoard weather={weather} failed={failed} crop={cropping} />
+            )}
+          </div>
+        )}
+      </div>
     </>
   );
 
