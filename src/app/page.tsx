@@ -97,7 +97,7 @@ export default function Home() {
     setFlatGlass(next.flatGlass);
   }, []);
 
-  const { clock, publishClock, connected } = useSync({
+  const { clock, publishClock, connected, localChannel } = useSync({
     scene: { videoIndex, panel, flatGlass },
     onRemoteScene: applyRemoteScene,
   });
@@ -321,9 +321,13 @@ export default function Home() {
           而一般模式下反而最需要先確認 relay 有沒有起來。 */}
       {showStatus && (
         <p className="pointer-events-none fixed bottom-2 left-2 z-50 rounded bg-black/50 px-2 py-1 font-mono text-[11px] text-white/70">
-          {cropping ? (display === "left" ? "L" : "R") : "full"} · sync{" "}
+          {cropping ? (display === "left" ? "L" : "R") : "full"} · relay{" "}
           <span className={connected ? "text-emerald-300" : "text-red-300"}>
             {connected ? "on" : "off"}
+          </span>{" "}
+          · local{" "}
+          <span className={localChannel ? "text-emerald-300" : "text-red-300"}>
+            {localChannel ? "on" : "off"}
           </span>{" "}
           · glass {flatGlass ? "flat" : "on"}
         </p>

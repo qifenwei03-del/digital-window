@@ -1,6 +1,6 @@
 # Digital Window — UI 規格
 
-寶鋪知行案 C 區數位窗景。1:1 展示螢幕(實體 150 × 150 cm),影片背景 + 可切換的天氣面板。
+寶舖知行案 C 區數位窗景。1:1 展示螢幕(實體 150 × 150 cm),影片背景 + 可切換的天氣面板。
 
 本文件記錄目前實作的**全部** UI 資訊:文字、字級、字體、玻璃樣式、配色、版面參數。數值皆從原始碼抽取,非估算。
 
@@ -506,6 +506,21 @@ S 儀表板不用插圖,改用 lucide 線條圖(`WeatherGlyph`)。
 兩台電視各自開同一個網址,用 **WebSocket** 讓場景與影片時間一致。
 
 刻意**不用 localStorage** —— 那是同一瀏覽器同一 origin 內共享,跨裝置無效。
+
+### 兩條通道
+
+| 通道 | 範圍 | 需要伺服器 | https 可用 |
+|---|---|---|---|
+| `BroadcastChannel` | 同一個瀏覽器裡的視窗 | 否 | **是** |
+| WebSocket relay | 不同機器 | 是 | 否(混合內容) |
+
+**一台電腦推兩台螢幕、開兩個視窗的情況靠 BroadcastChannel 就夠了**,不必跑 relay,而且在 GitHub Pages 上照樣會同步 —— 這是先前只有 WebSocket 時做不到的(Pages 是 https,連不上 `ws://`)。
+
+兩條同時開著,訊息往兩邊送。`BroadcastChannel` 不會把訊息送回發送端自己,所以不必額外防回彈;跨通道的回彈由 `appliedRef` 擋掉。收訊處理兩條共用同一個 `handleMessage`,包含「連上未滿 3 秒不回答 hello」那條規則。
+
+狀態角標(`I`)分開顯示兩條:`relay on/off` 與 `local on/off`。
+
+仍然**不用 localStorage** —— 它跨裝置無效,而且要靠 storage 事件輪替,語意比 `BroadcastChannel` 髒得多。
 
 ### 伺服器
 

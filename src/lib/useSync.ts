@@ -3,11 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /*
-  兩台電視各自開同一個網址，用 WebSocket 讓場景與影片時間保持一致。
-  刻意不用 localStorage —— 那是同一瀏覽器的 origin 內共享，跨裝置無效。
+  讓多個視窗／多台機器的場景與影片時間保持一致。兩條通道並行：
 
-  伺服器連不上時整站照常運作（單機模式），只是不同步。
-  所以 GitHub Pages 那份靜態部署不會因為沒有 sync server 而壞掉。
+    · BroadcastChannel —— 同一個瀏覽器裡的視窗之間。零設定、不需要伺服器，
+      在 https 上也能用，所以 GitHub Pages 這種靜態部署照樣會同步。
+      一台電腦推兩台螢幕、開兩個視窗的情況靠它就夠了。
+
+    · WebSocket relay —— 兩台不同機器之間唯一的辦法。但 https 頁面連不上
+      ws://（混合內容），所以 Pages 上不會通，展場要從本機以 http 提供頁面。
+
+  兩條都連不上時整站照常運作（單機模式），只是不同步。
 */
 
 /*
@@ -43,6 +48,9 @@ function resolveUrl(): string {
   return `${scheme}//${window.location.hostname}:8787`;
 }
 
+/** 同瀏覽器視窗之間的頻道名稱 */
+const CHANNEL_NAME = "digital-window";
+
 const RECONNECT_MIN_MS = 1000;
 const RECONNECT_MAX_MS = 10000;
 /** 連上未滿這個時間的 client 不回答別人的 hello，避免兩台同時開機時互換場景 */
@@ -57,6 +65,12 @@ export function useSync({
 }) {
   const socketRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
+  /*
+    同瀏覽器通道有沒有在用。這是瀏覽器的靜態能力（有沒有 BroadcastChannel），
+    不是會變動的連線狀態，所以直接推導、不進 state ——
+    在 effect 裡呼叫 setState 只是把一個常數繞一圈。
+  */
+  const localChannel = typeof BroadcastChannel !== "undefined";
   const [clock, setClock] = useState<RemoteClock | null>(null);
 
   /*
@@ -77,6 +91,78 @@ export function useSync({
   useEffect(() => {
     onRemoteRef.current = onRemoteScene;
   }, [onRemoteScene]);
+
+  /*
+    兩條通道共用的收訊處理。
+
+    hello 的規則：只有「已經連上一段時間」的那端才回答。兩端同時開機時
+    都會發 hello，若雙方都回答就會互換場景、變成各自不同步。
+  */
+  const handleMessage = useCallback(
+    (msg: Record<string, unknown>, reply: (payload: Record<string, unknown>) => void, openedAt: number) => {
+      if (msg.t === "hello") {
+        if (performance.now() - openedAt > HELLO_ANSWER_AFTER_MS) {
+          reply({ t: "scene", ...sceneRef.current });
+        }
+      } else if (
+        msg.t === "scene" &&
+        typeof msg.videoIndex === "number" &&
+        typeof msg.panel === "string"
+      ) {
+        // flatGlass 用 === true 取值：舊版本的 client 不會送這個欄位
+        const next = {
+          videoIndex: msg.videoIndex,
+          panel: msg.panel,
+          flatGlass: msg.flatGlass === true,
+        };
+        appliedRef.current = JSON.stringify(next);
+        onRemoteRef.current(next);
+      } else if (
+        msg.t === "clock" &&
+        typeof msg.videoIndex === "number" &&
+        typeof msg.time === "number"
+      ) {
+        setClock({ videoIndex: msg.videoIndex, time: msg.time, sentAt: performance.now() });
+      }
+    },
+    []
+  );
+
+  /*
+    同一台機器、同一個瀏覽器裡的視窗之間，用 BroadcastChannel 同步。
+
+    這不是取代 WebSocket，是補另一半：
+      · BroadcastChannel —— 同瀏覽器同 origin。零設定、不需要伺服器，
+        而且在 https 上也能用，所以 GitHub Pages 這種靜態部署照樣會同步。
+      · WebSocket relay ——「兩台不同機器」唯一的辦法，但 https 頁面連不上
+        ws://，所以在 Pages 上永遠不會通。
+
+    兩條同時開著，訊息往兩邊送。BroadcastChannel 不會把訊息送回發送端自己，
+    所以不必額外防回彈；跨通道的回彈則由 appliedRef 擋掉。
+
+    刻意不用 localStorage —— 它跨裝置無效，而且要靠 storage 事件輪替，
+    語意比 BroadcastChannel 髒得多。
+  */
+  const channelRef = useRef<BroadcastChannel | null>(null);
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+    const channel = new BroadcastChannel(CHANNEL_NAME);
+    channelRef.current = channel;
+    const openedAt = performance.now();
+
+    channel.addEventListener("message", (event: MessageEvent) => {
+      const msg = event.data as Record<string, unknown>;
+      if (msg && typeof msg === "object") {
+        handleMessage(msg, (reply) => channel.postMessage(reply), openedAt);
+      }
+    });
+    channel.postMessage({ t: "hello" });
+
+    return () => {
+      channelRef.current = null;
+      channel.close();
+    };
+  }, [handleMessage]);
 
   useEffect(() => {
     const url = resolveUrl();
@@ -116,30 +202,7 @@ export function useSync({
         } catch {
           return;
         }
-        if (msg.t === "hello") {
-          /*
-            只有「已經連上一段時間」的那台才回答。兩台同時開機時都會發 hello，
-            若雙方都回答就會互換場景、變成各自不同步。
-          */
-          if (performance.now() - openedAt > HELLO_ANSWER_AFTER_MS) {
-            socket.send(JSON.stringify({ t: "scene", ...sceneRef.current }));
-          }
-        } else if (
-          msg.t === "scene" &&
-          typeof msg.videoIndex === "number" &&
-          typeof msg.panel === "string"
-        ) {
-          // flatGlass 用 === true 取值：舊版本的 client 不會送這個欄位
-          const next = {
-            videoIndex: msg.videoIndex,
-            panel: msg.panel,
-            flatGlass: msg.flatGlass === true,
-          };
-          appliedRef.current = JSON.stringify(next);
-          onRemoteRef.current(next);
-        } else if (msg.t === "clock" && typeof msg.videoIndex === "number" && typeof msg.time === "number") {
-          setClock({ videoIndex: msg.videoIndex, time: msg.time, sentAt: performance.now() });
-        }
+        handleMessage(msg, (reply) => socket.send(JSON.stringify(reply)), openedAt);
       });
 
       const scheduleReconnect = () => {
@@ -162,11 +225,14 @@ export function useSync({
       socketRef.current?.close();
       socketRef.current = null;
     };
-  }, []);
+    // handleMessage 的依賴是空的、身分穩定，所以這個 effect 實際上只跑一次
+  }, [handleMessage]);
 
+  // 兩條通道都送。哪一條沒接上就自然略過，不影響另一條
   const send = useCallback((payload: Record<string, unknown>) => {
     const socket = socketRef.current;
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(payload));
+    channelRef.current?.postMessage(payload);
   }, []);
 
   /*
@@ -190,5 +256,5 @@ export function useSync({
     [send]
   );
 
-  return { connected, clock, publishClock };
+  return { connected, localChannel, clock, publishClock };
 }
