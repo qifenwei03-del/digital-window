@@ -159,26 +159,34 @@ export default function Home() {
       {/* 佈場用：把實體窗框的框料疊出來，確認 UI 真的落在玻璃區內。
           按 W 開關，展場不該看到。畫在舞台裡，所以會跟著裁切一起位移。 */}
       {showFrame && (
-        <div className="pointer-events-none absolute inset-0 z-30" aria-hidden>
+        <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden" aria-hidden>
+          {/* 橫向框料。上下框大半落在螢幕外，超出的部分會被 overflow-hidden 裁掉 */}
           {[
-            { top: 0, bottom: 100 - FRAME_BANDS.upper.top, label: "上框" },
-            {
-              top: FRAME_BANDS.midRail.top,
-              bottom: 100 - FRAME_BANDS.midRail.bottom,
-              label: "中橫杆",
-            },
-            { top: FRAME_BANDS.lower.bottom, bottom: 0, label: "下框" },
-          ].map(({ top, bottom, label }) => (
+            { band: FRAME_BANDS.topRail, label: "上框" },
+            { band: FRAME_BANDS.midRail, label: "中橫杆" },
+            { band: FRAME_BANDS.bottomRail, label: "下框" },
+          ].map(({ band, label }) => (
             <div
               key={label}
               className="absolute inset-x-0 flex items-center justify-center bg-amber-400/25 outline outline-[0.15cqw] outline-amber-300/60"
-              style={{ top: `${top}%`, bottom: `${bottom}%` }}
+              style={{ top: `${band.top}%`, height: `${band.bottom - band.top}%` }}
             >
               <span className="text-[1.1cqw] tracking-widest text-amber-100/80">{label}</span>
             </div>
           ))}
-          {/* 中梃：落在正中線，也就是兩台電視的接縫 */}
-          <div className="absolute inset-y-0 left-1/2 w-[1.4cqw] -translate-x-1/2 bg-amber-400/25 outline outline-[0.15cqw] outline-amber-300/60" />
+
+          {/* 直向框料。左右邊料是「電視比框寬」的那一截，蓋掉的正好是 1:1 舞台的黑邊 */}
+          {[
+            { from: FRAME_BANDS.leftStile.from, to: FRAME_BANDS.leftStile.to },
+            { from: FRAME_BANDS.rightStile.from, to: FRAME_BANDS.rightStile.to },
+            { from: FRAME_BANDS.mullion.left, to: FRAME_BANDS.mullion.right },
+          ].map(({ from, to }) => (
+            <div
+              key={from}
+              className="absolute inset-y-0 bg-amber-400/25 outline outline-[0.15cqw] outline-amber-300/60"
+              style={{ left: `${from}%`, width: `${to - from}%` }}
+            />
+          ))}
         </div>
       )}
 
