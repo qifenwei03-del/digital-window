@@ -15,7 +15,7 @@ import { FRAME_BANDS, SAFE_SQUARE } from "@/lib/frame";
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 // 鍵盤 1、2… 依序切換
-const VIDEOS = [1, 2, 3, 4, 5, 6].map((n) => `${BASE_PATH}/videos/${n}.mp4`);
+const VIDEOS = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => `${BASE_PATH}/videos/${n}.mp4`);
 
 // A、S、D、F、G 各自對應一個面板，直接選取；預設同 A
 type Panel = "compact" | "dashboard" | "detail" | "ambient" | "board";
