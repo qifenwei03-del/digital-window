@@ -17,6 +17,14 @@ const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 // 鍵盤 1、2… 依序切換
 const VIDEOS = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => `${BASE_PATH}/videos/${n}.mp4`);
 
+/*
+  開機預設的影片。索引從 0 起算，所以 6 是 7.mp4（城市黃昏）。
+
+  它是唯一做過「放慢 3 倍 + 來回」的一支，循環接點的亮度落差是 0 ——
+  展場會連續播一整天，接縫每隔幾十秒跳一次比畫面本身難看得多。
+*/
+const DEFAULT_VIDEO_INDEX = 6;
+
 // A、S、D、F、G 各自對應一個面板，直接選取；預設同 A
 type Panel = "compact" | "dashboard" | "detail" | "ambient" | "board";
 const PANEL_KEYS: Record<string, Panel> = {
@@ -63,7 +71,7 @@ function usePortrait() {
 }
 
 export default function Home() {
-  const [videoIndex, setVideoIndex] = useState(0);
+  const [videoIndex, setVideoIndex] = useState(DEFAULT_VIDEO_INDEX);
   const [panel, setPanel] = useState<Panel>("compact");
   const [display, setDisplay] = useState<Display>("normal");
   const [showStatus, setShowStatus] = useState(false);
