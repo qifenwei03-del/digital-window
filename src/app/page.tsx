@@ -14,13 +14,18 @@ import { FRAME_BANDS, SAFE_SQUARE } from "@/lib/frame";
 // GitHub Pages 部署在子路徑下，靜態資源需加上 basePath
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
-// 鍵盤 1、2… 依序切換
-const VIDEOS = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => `${BASE_PATH}/videos/${n}.mp4`);
+/*
+  鍵盤 1、2… 依序切換。
+
+  上限是 9：切換用的是單一數字鍵（Number(e.key)），第十支就沒有鍵可以對應了，
+  屆時要改成別的輸入方式（例如兩位數緩衝或方向鍵循環）。
+*/
+const VIDEOS = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `${BASE_PATH}/videos/${n}.mp4`);
 
 /*
   開機預設的影片。索引從 0 起算，所以 6 是 7.mp4（城市黃昏）。
 
-  它和 8 是唯二做過「放慢 6 倍 + 來回」的，循環接點的亮度落差是 0 ——
+  它和 8、9 都做過「放慢 6 倍 + 來回」，循環接點的亮度落差是 0 ——
   展場會連續播一整天，接縫每隔幾十秒跳一次比畫面本身難看得多。
 */
 const DEFAULT_VIDEO_INDEX = 6;
